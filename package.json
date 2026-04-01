@@ -1,0 +1,47 @@
+{
+  "name": "always-jiggle",
+  "version": "1.0.0",
+  "description": "macOS menu bar mouse jiggler and system activity simulator",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.renderer.json",
+    "start": "npm run build && electron dist/main/index.js",
+    "watch": "tsc -p tsconfig.json --watch",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
+    "@types/node": "^20.0.0",
+    "electron": "41.1.0",
+    "electron-builder": "^26.0.0",
+    "typescript": "^5.4.0"
+  },
+  "build": {
+    "appId": "com.cesar.alwaysjiggle",
+    "productName": "AlwaysJiggle",
+    "copyright": "Copyright © 2026",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        { "target": "dmg", "arch": ["arm64"] }
+      ],
+      "icon": "build/icon.icns",
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSAccessibilityUsageDescription": "AlwaysJiggle needs Accessibility access to move the mouse cursor.",
+        "NSAppleEventsUsageDescription": "AlwaysJiggle uses Apple Events to simulate user activity."
+      }
+    },
+    "files": [
+      "dist/**/*",
+      "src/renderer/index.html",
+      "src/renderer/style.css",
+      "build/tray-*.png",
+      "build/tray-*@2x.png"
+    ],
+    "asar": true
+  }
+}

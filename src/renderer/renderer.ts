@@ -1,0 +1,202 @@
+import type { AppSettings, Schedule, SettingsPatch } from '../main/types';
+
+interface ElectronAPI {
+  getState: () => Promise<AppSettings>;
+  setState: (patch: SettingsPatch) => Promise<AppSettings>;
+  onStateChanged: (cb: (state: AppSettings) => void) => void;
+  closePopup: () => void;
+  quit: () => void;
+}
+
+declare global {
+  interface Window {
+    electronAPI: ElectronAPI;
+  }
+}
+
+const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+// ── DOM helpers ───────────────────────────────────────────────────────────────
+
+function el<T extends HTMLElement>(id: string): T {
+  return document.getElementById(id) as T;
+}
+
+// ── Schedule rendering ────────────────────────────────────────────────────────
+
+function renderSchedules(schedules: Schedule[]): void {
+  const list = el('schedules-list');
+  const hint = el('schedule-hint');
+
+  hint.style.display = schedules.length === 0 ? 'block' : 'none';
+  list.innerHTML = '';
+
+  schedules.forEach(schedule => {
+    const row = document.createElement('div');
+    row.className = 'schedule-row';
+    row.dataset.id = schedule.id;
+
+    const daysHtml = DAY_LABELS.map((label, idx) =>
+      `<button class="day-btn${schedule.days.includes(idx) ? ' active' : ''}" data-day="${idx}">${label}</button>`
+    ).join('');
+
+    row.innerHTML = `
+      <div class="schedule-row-header">
+        <label class="schedule-toggle">
+          <input type="checkbox" class="sched-enabled" ${schedule.enabled ? 'checked' : ''}>
+          <span>Active</span>
+        </label>
+        <button class="schedule-delete" title="Remove">✕</button>
+      </div>
+      <div class="schedule-days">${daysHtml}</div>
+      <div class="schedule-time">
+        <input type="time" class="time-input sched-start" value="${schedule.startTime}">
+        <span>to</span>
+        <input type="time" class="time-input sched-end" value="${schedule.endTime}">
+      </div>
+    `;
+
+    // Enable toggle
+    const enabledCb = row.querySelector('.sched-enabled') as HTMLInputElement;
+    enabledCb.addEventListener('change', () => {
+      patchSchedule(schedule.id, { enabled: enabledCb.checked });
+    });
+
+    // Delete button
+    const deleteBtn = row.querySelector('.schedule-delete') as HTMLButtonElement;
+    deleteBtn.addEventListener('click', () => removeSchedule(schedule.id));
+
+    // Day buttons
+    row.querySelectorAll('.day-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const day = parseInt((btn as HTMLElement).dataset.day ?? '0', 10);
+        const newDays = schedule.days.includes(day)
+          ? schedule.days.filter(d => d !== day)
+          : [...schedule.days, day].sort((a, b) => a - b);
+        patchSchedule(schedule.id, { days: newDays });
+      });
+    });
+
+    // Time inputs
+    const startInput = row.querySelector('.sched-start') as HTMLInputElement;
+    const endInput   = row.querySelector('.sched-end')   as HTMLInputElement;
+
+    startInput.addEventListener('change', () => {
+      patchSchedule(schedule.id, { startTime: startInput.value });
+    });
+    endInput.addEventListener('change', () => {
+      patchSchedule(schedule.id, { endTime: endInput.value });
+    });
+
+    list.appendChild(row);
+  });
+}
+
+async function patchSchedule(id: string, changes: Partial<Schedule>): Promise<void> {
+  const state = await window.electronAPI.getState();
+  const updated = state.schedules.map(s =>
+    s.id === id ? { ...s, ...changes } : s
+  );
+  await window.electronAPI.setState({ schedules: updated });
+}
+
+async function removeSchedule(id: string): Promise<void> {
+  const state = await window.electronAPI.getState();
+  const updated = state.schedules.filter(s => s.id !== id);
+  await window.electronAPI.setState({ schedules: updated });
+}
+
+async function addSchedule(): Promise<void> {
+  const state = await window.electronAPI.getState();
+  const newSchedule: Schedule = {
+    id: `sched_${Date.now()}`,
+    enabled: true,
+    days: [1, 2, 3, 4, 5], // Mon–Fri
+    startTime: '09:00',
+    endTime: '17:00',
+  };
+  await window.electronAPI.setState({ schedules: [...state.schedules, newSchedule] });
+}
+
+// ── Apply state to UI ─────────────────────────────────────────────────────────
+
+function applyStateToUI(state: AppSettings): void {
+  (el<HTMLInputElement>('enabled')).checked = state.enabled;
+
+  const modeRadio = document.querySelector<HTMLInputElement>(
+    `input[name="mode"][value="${state.mode}"]`
+  );
+  if (modeRadio) modeRadio.checked = true;
+
+  (el<HTMLSelectElement>('interval')).value = String(state.interval);
+  (el<HTMLInputElement>('neverOnBattery')).checked   = state.neverOnBattery;
+  (el<HTMLInputElement>('neverOnLockScreen')).checked = state.neverOnLockScreen;
+  (el<HTMLInputElement>('launchOnLogin')).checked    = state.launchOnLogin;
+
+  renderSchedules(state.schedules);
+}
+
+// ── Wiring ────────────────────────────────────────────────────────────────────
+
+async function init(): Promise<void> {
+  const state = await window.electronAPI.getState();
+  applyStateToUI(state);
+
+  // Push updates from main (e.g., conditions block/unblock)
+  window.electronAPI.onStateChanged(applyStateToUI);
+
+  // Enable toggle
+  el<HTMLInputElement>('enabled').addEventListener('change', e => {
+    window.electronAPI.setState({ enabled: (e.target as HTMLInputElement).checked });
+  });
+
+  // Mode
+  document.querySelectorAll<HTMLInputElement>('input[name="mode"]').forEach(radio => {
+    radio.addEventListener('change', e => {
+      const value = (e.target as HTMLInputElement).value as 'standard' | 'zen';
+      window.electronAPI.setState({ mode: value });
+    });
+  });
+
+  // Interval
+  el<HTMLSelectElement>('interval').addEventListener('change', e => {
+    window.electronAPI.setState({ interval: parseInt((e.target as HTMLSelectElement).value, 10) });
+  });
+
+  // Never-jiggle conditions
+  el<HTMLInputElement>('neverOnBattery').addEventListener('change', e => {
+    window.electronAPI.setState({ neverOnBattery: (e.target as HTMLInputElement).checked });
+  });
+
+  el<HTMLInputElement>('neverOnLockScreen').addEventListener('change', e => {
+    window.electronAPI.setState({ neverOnLockScreen: (e.target as HTMLInputElement).checked });
+  });
+
+  // Launch on login
+  el<HTMLInputElement>('launchOnLogin').addEventListener('change', e => {
+    window.electronAPI.setState({ launchOnLogin: (e.target as HTMLInputElement).checked });
+  });
+
+  // Add schedule
+  el('add-schedule').addEventListener('click', addSchedule);
+
+  // Close popup
+  el('close-btn').addEventListener('click', () => {
+    window.electronAPI.closePopup();
+  });
+
+  // Open Accessibility settings
+  el('open-accessibility').addEventListener('click', e => {
+    e.preventDefault();
+    // Trigger main to open System Preferences via shell
+    // We reuse setState as a simple message carrier
+    window.electronAPI.setState({} as Partial<AppSettings>);
+  });
+
+  // Quit
+  el('quit-btn').addEventListener('click', () => {
+    window.electronAPI.quit();
+  });
+}
+
+init().catch(console.error);

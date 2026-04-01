@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>AlwaysJiggle</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="panel">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <span class="app-icon">🐾</span>
+        <span class="title">AlwaysJiggle</span>
+      </div>
+      <div class="header-right">
+        <label class="toggle-switch" id="enabled-toggle-label" title="Enable / Disable">
+          <input type="checkbox" id="enabled">
+          <span class="slider"></span>
+        </label>
+        <button class="close-btn" id="close-btn" title="Close">✕</button>
+      </div>
+    </div>
+
+    <!-- Accessibility warning (hidden by default) -->
+    <div class="warning-banner" id="accessibility-warning" style="display:none">
+      ⚠️ Accessibility permission required for Standard mode.<br>
+      <a href="#" id="open-accessibility">Open Privacy Settings</a>
+    </div>
+
+    <!-- Mode -->
+    <div class="section">
+      <div class="section-title">Mode</div>
+      <div class="radio-group">
+        <label class="radio-option">
+          <input type="radio" name="mode" value="standard" id="mode-standard">
+          <div class="radio-content">
+            <span class="radio-label">Standard</span>
+            <span class="radio-desc">Moves mouse slightly and returns</span>
+          </div>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="mode" value="zen" id="mode-zen">
+          <div class="radio-content">
+            <span class="radio-label">Zen</span>
+            <span class="radio-desc">Prevents idle invisibly (no cursor movement)</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Interval -->
+    <div class="section">
+      <div class="section-title">Jiggle every</div>
+      <select id="interval" class="select-input">
+        <option value="5">5 seconds</option>
+        <option value="10">10 seconds</option>
+        <option value="30">30 seconds</option>
+        <option value="60">1 minute</option>
+        <option value="300">5 minutes</option>
+      </select>
+    </div>
+
+    <!-- Never jiggle if -->
+    <div class="section">
+      <div class="section-title">Never jiggle if</div>
+      <div class="checkbox-group">
+        <label class="checkbox-option">
+          <input type="checkbox" id="neverOnBattery">
+          <span>On battery power</span>
+        </label>
+        <label class="checkbox-option">
+          <input type="checkbox" id="neverOnLockScreen">
+          <span>Screen is locked</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Schedule</div>
+        <button class="add-btn" id="add-schedule">+ Add</button>
+      </div>
+      <div class="schedule-hint" id="schedule-hint">
+        No schedules — jiggler runs at all times when enabled.
+      </div>
+      <div id="schedules-list"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <label class="checkbox-option">
+        <input type="checkbox" id="launchOnLogin">
+        <span>Launch on login</span>
+      </label>
+      <button class="quit-btn" id="quit-btn">Quit</button>
+    </div>
+
+  </div>
+  <script type="module" src="../../dist/renderer/renderer.js"></script>
+</body>
+</html>
