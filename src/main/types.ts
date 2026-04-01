@@ -8,7 +8,7 @@ export interface Schedule {
 
 export interface AppSettings {
   enabled: boolean;
-  mode: 'standard' | 'zen';
+  mode: 'standard' | 'zen' | 'humanized';
   interval: number; // seconds
   launchOnLogin: boolean;
   neverOnBattery: boolean;

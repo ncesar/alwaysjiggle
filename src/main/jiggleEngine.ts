@@ -3,6 +3,7 @@ import { execFileSync, spawn, ChildProcess } from 'child_process';
 import store from './store';
 import { isBlocked } from './conditions';
 import { isWithinSchedule } from './scheduler';
+import * as humanEngine from './humanEngine';
 
 type EngineState = 'stopped' | 'running' | 'paused';
 
@@ -96,16 +97,18 @@ function tick(): void {
 export function start(): void {
   if (state === 'running') return;
 
-  const intervalSec = store.get('interval');
   const mode = store.get('mode');
-
   if (mode === 'zen') startZen();
 
-  intervalHandle = setInterval(tick, intervalSec * 1000);
-  state = 'running';
+  if (mode === 'humanized') {
+    humanEngine.start();
+  } else {
+    const intervalSec = store.get('interval');
+    intervalHandle = setInterval(tick, intervalSec * 1000);
+    tick(); // fire once immediately
+  }
 
-  // Fire once immediately (respects conditions + schedule)
-  tick();
+  state = 'running';
 }
 
 export function stop(): void {
@@ -114,12 +117,14 @@ export function stop(): void {
     intervalHandle = null;
   }
   stopZen();
+  humanEngine.stop();
   state = 'stopped';
 }
 
 export function pause(): void {
   if (state !== 'running') return;
   stopZen();
+  humanEngine.pause();
   state = 'paused';
 }
 
@@ -130,8 +135,13 @@ export function resume(): void {
   const mode = store.get('mode');
   if (mode === 'zen') startZen();
 
+  if (mode === 'humanized') {
+    humanEngine.resume();
+  } else {
+    tick(); // fire once immediately on resume
+  }
+
   state = 'running';
-  tick(); // fire once immediately on resume
 }
 
 export function restart(): void {

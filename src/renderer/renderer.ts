@@ -129,6 +129,7 @@ function applyStateToUI(state: AppSettings): void {
   if (modeRadio) modeRadio.checked = true;
 
   (el<HTMLSelectElement>('interval')).value = String(state.interval);
+  (el<HTMLSelectElement>('interval')).disabled = state.mode === 'humanized';
   (el<HTMLInputElement>('neverOnBattery')).checked   = state.neverOnBattery;
   (el<HTMLInputElement>('neverOnLockScreen')).checked = state.neverOnLockScreen;
   (el<HTMLInputElement>('launchOnLogin')).checked    = state.launchOnLogin;
@@ -153,7 +154,7 @@ async function init(): Promise<void> {
   // Mode
   document.querySelectorAll<HTMLInputElement>('input[name="mode"]').forEach(radio => {
     radio.addEventListener('change', e => {
-      const value = (e.target as HTMLInputElement).value as 'standard' | 'zen';
+      const value = (e.target as HTMLInputElement).value as AppSettings['mode'];
       window.electronAPI.setState({ mode: value });
     });
   });

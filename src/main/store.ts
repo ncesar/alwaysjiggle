@@ -9,7 +9,7 @@ const store = new Store<AppSettings>({
     },
     mode: {
       type: 'string',
-      enum: ['standard', 'zen'],
+      enum: ['standard', 'zen', 'humanized'],
       default: 'standard',
     },
     interval: {

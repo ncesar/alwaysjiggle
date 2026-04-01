@@ -12,7 +12,7 @@ const store = new electron_store_1.default({
         },
         mode: {
             type: 'string',
-            enum: ['standard', 'zen'],
+            enum: ['standard', 'zen', 'humanized'],
             default: 'standard',
         },
         interval: {

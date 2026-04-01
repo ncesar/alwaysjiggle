@@ -87,6 +87,7 @@ function applyStateToUI(state) {
     if (modeRadio)
         modeRadio.checked = true;
     (el('interval')).value = String(state.interval);
+    (el('interval')).disabled = state.mode === 'humanized';
     (el('neverOnBattery')).checked = state.neverOnBattery;
     (el('neverOnLockScreen')).checked = state.neverOnLockScreen;
     (el('launchOnLogin')).checked = state.launchOnLogin;

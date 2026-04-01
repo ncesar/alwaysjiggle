@@ -424,3 +424,8 @@ input:checked + .slider::before {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+.select-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
