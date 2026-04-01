@@ -18,16 +18,8 @@ let caffeinateProcess: ChildProcess | null = null;
 
 const HELPER_BIN = `${__dirname}/../../helpers/jiggle-helper`;
 
-function runHelper(cmd: 'mouse' | 'key'): string {
+function runHelper(cmd: 'mouse' | 'zen'): string {
   return execFileSync(HELPER_BIN, [cmd], { timeout: 3000 }).toString().trim();
-}
-
-function sendInvisibleKeyEvent(): void {
-  try {
-    runHelper('key');
-  } catch {
-    // Non-critical — ignore failures
-  }
 }
 
 // ── Standard jiggle ──────────────────────────────────────────────────────────
@@ -57,7 +49,6 @@ function startZen(): void {
     detached: false,
     stdio: 'ignore',
   });
-  caffeinateProcess.unref();
 }
 
 function stopZen(): void {
@@ -89,10 +80,14 @@ function tick(): void {
       console.error('[jiggle] error:', err);
     }
   } else {
-    // Zen: powerSaveBlocker + caffeinate are already running.
-    // Periodically send an invisible key event to stimulate the IOHID layer
-    // so apps like Slack/Teams also see activity.
-    sendInvisibleKeyEvent();
+    // Zen: powerSaveBlocker + caffeinate prevent system sleep.
+    // IOPMAssertionDeclareUserActivity resets HIDIdleTime so apps like
+    // Slack/Teams don't show "away" — no cursor movement required.
+    try {
+      runHelper('zen');
+    } catch {
+      // Non-critical
+    }
   }
 }
 

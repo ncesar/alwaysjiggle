@@ -1,10 +1,11 @@
 import CoreGraphics
 import Foundation
+import IOKit.pwr_mgt
 
 let args = CommandLine.arguments
 
 guard args.count > 1 else {
-    fputs("Usage: jiggle-helper [mouse|key]\n", stderr)
+    fputs("Usage: jiggle-helper [mouse|zen]\n", stderr)
     exit(1)
 }
 
@@ -21,14 +22,19 @@ case "mouse":
     CGAssociateMouseAndMouseCursorPosition(1)
     print("\(Int(loc.x)),\(Int(loc.y))")
 
-case "key":
-    guard let ref = CGEvent(source: nil) else { exit(0) }
-    let loc = ref.location
-    CGAssociateMouseAndMouseCursorPosition(0)
-    CGWarpMouseCursorPosition(CGPoint(x: loc.x + 1, y: loc.y))
-    usleep(120_000)
-    CGWarpMouseCursorPosition(CGPoint(x: loc.x, y: loc.y))
-    CGAssociateMouseAndMouseCursorPosition(1)
+case "zen":
+    // IOPMAssertionDeclareUserActivity resets the user idle timer (HIDIdleTime)
+    // without any cursor movement and without requiring Accessibility permission.
+    // Verified working on macOS Tahoe 26.
+    var assertionID: IOPMAssertionID = 0
+    let result = IOPMAssertionDeclareUserActivity(
+        "AlwaysJiggle" as CFString,
+        kIOPMUserActiveLocal,
+        &assertionID
+    )
+    if result == kIOReturnSuccess {
+        IOPMAssertionRelease(assertionID)
+    }
 
 default:
     fputs("Unknown command: \(args[1])\n", stderr)

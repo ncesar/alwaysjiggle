@@ -27,14 +27,6 @@ const HELPER_BIN = `${__dirname}/../../helpers/jiggle-helper`;
 function runHelper(cmd) {
     return (0, child_process_1.execFileSync)(HELPER_BIN, [cmd], { timeout: 3000 }).toString().trim();
 }
-function sendInvisibleKeyEvent() {
-    try {
-        runHelper('key');
-    }
-    catch {
-        // Non-critical — ignore failures
-    }
-}
 // ── Standard jiggle ──────────────────────────────────────────────────────────
 function checkAccessibilityPermission() {
     try {
@@ -59,7 +51,6 @@ function startZen() {
         detached: false,
         stdio: 'ignore',
     });
-    caffeinateProcess.unref();
 }
 function stopZen() {
     if (zenBlockerId !== null) {
@@ -91,10 +82,15 @@ function tick() {
         }
     }
     else {
-        // Zen: powerSaveBlocker + caffeinate are already running.
-        // Periodically send an invisible key event to stimulate the IOHID layer
-        // so apps like Slack/Teams also see activity.
-        sendInvisibleKeyEvent();
+        // Zen: powerSaveBlocker + caffeinate prevent system sleep.
+        // IOPMAssertionDeclareUserActivity resets HIDIdleTime so apps like
+        // Slack/Teams don't show "away" — no cursor movement required.
+        try {
+            runHelper('zen');
+        }
+        catch {
+            // Non-critical
+        }
     }
 }
 // ── Public API ───────────────────────────────────────────────────────────────
