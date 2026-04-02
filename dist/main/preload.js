@@ -4,6 +4,7 @@ const electron_1 = require("electron");
 electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     getState: () => electron_1.ipcRenderer.invoke('get-state'),
     setState: (patch) => electron_1.ipcRenderer.invoke('set-state', patch),
+    pauseUntil: (untilMs) => electron_1.ipcRenderer.invoke('pause-until', untilMs),
     onStateChanged: (cb) => {
         electron_1.ipcRenderer.on('state-changed', (_event, state) => cb(state));
     },

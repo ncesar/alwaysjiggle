@@ -18,12 +18,27 @@
         <span class="title">AlwaysJiggle</span>
       </div>
       <div class="header-right">
+        <div class="pause-menu-wrap" id="pause-menu-wrap">
+          <button class="pause-btn" id="pause-btn" title="Pause for…">⏸</button>
+          <div class="pause-menu" id="pause-menu" style="display:none">
+            <button class="pause-option" data-minutes="15">Pause for 15 min</button>
+            <button class="pause-option" data-minutes="30">Pause for 30 min</button>
+            <button class="pause-option" data-minutes="60">Pause for 1 hour</button>
+            <button class="pause-option" data-until="tomorrow">Pause until tomorrow</button>
+          </div>
+        </div>
         <label class="toggle-switch" id="enabled-toggle-label" title="Enable / Disable">
           <input type="checkbox" id="enabled">
           <span class="slider"></span>
         </label>
         <button class="close-btn" id="close-btn" title="Close">✕</button>
       </div>
+    </div>
+
+    <!-- Timed pause bar (hidden when not paused with a timer) -->
+    <div class="pause-bar" id="pause-bar" style="display:none">
+      <span id="pause-label">Paused</span>
+      <button class="pause-resume-btn" id="pause-resume-btn">Resume</button>
     </div>
 
     <!-- Accessibility warning (hidden by default) -->

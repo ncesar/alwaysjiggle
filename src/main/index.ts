@@ -5,6 +5,32 @@ import * as jiggleEngine from './jiggleEngine';
 import * as conditions from './conditions';
 import { SettingsPatch } from './types';
 
+let timedPauseHandle: ReturnType<typeof setTimeout> | null = null;
+
+function clearTimedPause(): void {
+  if (timedPauseHandle !== null) {
+    clearTimeout(timedPauseHandle);
+    timedPauseHandle = null;
+  }
+  store.set('pauseUntil', null);
+}
+
+function scheduleTimedResume(untilMs: number): void {
+  clearTimedPause();
+  store.set('pauseUntil', untilMs);
+  const delay = Math.max(0, untilMs - Date.now());
+  timedPauseHandle = setTimeout(() => {
+    timedPauseHandle = null;
+    store.set('pauseUntil', null);
+    // Only resume if still enabled and not blocked by conditions
+    if (store.get('enabled') && !conditions.isBlocked()) {
+      jiggleEngine.resume();
+    }
+    trayManager.updateTrayIcon();
+    pushStateToRenderer();
+  }, delay);
+}
+
 // Single instance lock
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -42,8 +68,18 @@ app.whenReady().then(() => {
   // Apply persisted login item setting
   applyLoginSetting();
 
-  // Resume jiggling if it was enabled when the app last ran
-  if (store.get('enabled') && !conditions.isBlocked()) {
+  // Resume jiggling if it was enabled when the app last ran.
+  // If a timed pause is still in the future, re-arm the timer; otherwise clear stale value.
+  const savedPauseUntil = store.get('pauseUntil');
+  if (savedPauseUntil !== null) {
+    if (savedPauseUntil > Date.now()) {
+      scheduleTimedResume(savedPauseUntil);
+    } else {
+      store.set('pauseUntil', null);
+    }
+  }
+
+  if (store.get('enabled') && !conditions.isBlocked() && store.get('pauseUntil') === null) {
     jiggleEngine.start();
   }
 
@@ -66,6 +102,11 @@ app.whenReady().then(() => {
       }
     }
 
+    // If the user manually flips enabled, cancel any active timed pause
+    if ('enabled' in patch) {
+      clearTimedPause();
+    }
+
     const engineKeys: (keyof SettingsPatch)[] = ['enabled', 'mode', 'interval'];
     const needsRestart = engineKeys.some(k => k in patch);
     if (needsRestart) {
@@ -79,6 +120,14 @@ app.whenReady().then(() => {
     trayManager.updateTrayIcon();
     pushStateToRenderer();
 
+    return store.store;
+  });
+
+  ipcMain.handle('pause-until', (_event, untilMs: number) => {
+    scheduleTimedResume(untilMs);
+    jiggleEngine.pause();
+    trayManager.updateTrayIcon();
+    pushStateToRenderer();
     return store.store;
   });
 

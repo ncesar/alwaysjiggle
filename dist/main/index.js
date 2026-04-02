@@ -41,6 +41,29 @@ const store_1 = __importDefault(require("./store"));
 const trayManager = __importStar(require("./tray"));
 const jiggleEngine = __importStar(require("./jiggleEngine"));
 const conditions = __importStar(require("./conditions"));
+let timedPauseHandle = null;
+function clearTimedPause() {
+    if (timedPauseHandle !== null) {
+        clearTimeout(timedPauseHandle);
+        timedPauseHandle = null;
+    }
+    store_1.default.set('pauseUntil', null);
+}
+function scheduleTimedResume(untilMs) {
+    clearTimedPause();
+    store_1.default.set('pauseUntil', untilMs);
+    const delay = Math.max(0, untilMs - Date.now());
+    timedPauseHandle = setTimeout(() => {
+        timedPauseHandle = null;
+        store_1.default.set('pauseUntil', null);
+        // Only resume if still enabled and not blocked by conditions
+        if (store_1.default.get('enabled') && !conditions.isBlocked()) {
+            jiggleEngine.resume();
+        }
+        trayManager.updateTrayIcon();
+        pushStateToRenderer();
+    }, delay);
+}
 // Single instance lock
 if (!electron_1.app.requestSingleInstanceLock()) {
     electron_1.app.quit();
@@ -71,8 +94,18 @@ electron_1.app.whenReady().then(() => {
     trayManager.init();
     // Apply persisted login item setting
     applyLoginSetting();
-    // Resume jiggling if it was enabled when the app last ran
-    if (store_1.default.get('enabled') && !conditions.isBlocked()) {
+    // Resume jiggling if it was enabled when the app last ran.
+    // If a timed pause is still in the future, re-arm the timer; otherwise clear stale value.
+    const savedPauseUntil = store_1.default.get('pauseUntil');
+    if (savedPauseUntil !== null) {
+        if (savedPauseUntil > Date.now()) {
+            scheduleTimedResume(savedPauseUntil);
+        }
+        else {
+            store_1.default.set('pauseUntil', null);
+        }
+    }
+    if (store_1.default.get('enabled') && !conditions.isBlocked() && store_1.default.get('pauseUntil') === null) {
         jiggleEngine.start();
     }
     // ── IPC Handlers ──────────────────────────────────────────────────────────
@@ -91,6 +124,10 @@ electron_1.app.whenReady().then(() => {
                 store_1.default.set(key, patch[key]);
             }
         }
+        // If the user manually flips enabled, cancel any active timed pause
+        if ('enabled' in patch) {
+            clearTimedPause();
+        }
         const engineKeys = ['enabled', 'mode', 'interval'];
         const needsRestart = engineKeys.some(k => k in patch);
         if (needsRestart) {
@@ -99,6 +136,13 @@ electron_1.app.whenReady().then(() => {
         if ('launchOnLogin' in patch) {
             applyLoginSetting();
         }
+        trayManager.updateTrayIcon();
+        pushStateToRenderer();
+        return store_1.default.store;
+    });
+    electron_1.ipcMain.handle('pause-until', (_event, untilMs) => {
+        scheduleTimedResume(untilMs);
+        jiggleEngine.pause();
         trayManager.updateTrayIcon();
         pushStateToRenderer();
         return store_1.default.store;

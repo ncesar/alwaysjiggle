@@ -45,6 +45,10 @@ const store = new electron_store_1.default({
                 },
             },
         },
+        pauseUntil: {
+            type: ['number', 'null'],
+            default: null,
+        },
     },
 });
 exports.default = store;

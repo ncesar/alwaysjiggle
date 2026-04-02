@@ -42,6 +42,10 @@ const store = new Store<AppSettings>({
         },
       },
     },
+    pauseUntil: {
+      type: ['number', 'null'],
+      default: null,
+    },
   },
 });
 

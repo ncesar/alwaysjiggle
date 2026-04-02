@@ -14,6 +14,7 @@ export interface AppSettings {
   neverOnBattery: boolean;
   neverOnLockScreen: boolean;
   schedules: Schedule[];
+  pauseUntil: number | null; // ms timestamp; null = no timed pause
 }
 
 export type SettingsPatch = Partial<AppSettings>;

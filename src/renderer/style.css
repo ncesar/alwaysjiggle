@@ -429,3 +429,83 @@ input:checked + .slider::before {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ── Pause menu ───────────────────────────────────────────────────────────── */
+
+.pause-menu-wrap {
+  position: relative;
+}
+
+.pause-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+
+.pause-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.pause-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 160px;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+
+.pause-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.pause-option:hover {
+  background: var(--bg-hover);
+}
+
+/* ── Pause bar ────────────────────────────────────────────────────────────── */
+
+.pause-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  background: #2a2010;
+  border-bottom: 1px solid #5a4020;
+  font-size: 12px;
+  color: #ffcc66;
+}
+
+.pause-resume-btn {
+  background: none;
+  border: 1px solid #5a4020;
+  color: #ffcc66;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s;
+}
+
+.pause-resume-btn:hover {
+  background: rgba(255, 204, 102, 0.15);
+}

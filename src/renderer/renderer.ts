@@ -1,18 +1,5 @@
-import type { AppSettings, Schedule, SettingsPatch } from '../main/types';
+import type { AppSettings, Schedule } from '../main/types';
 
-interface ElectronAPI {
-  getState: () => Promise<AppSettings>;
-  setState: (patch: SettingsPatch) => Promise<AppSettings>;
-  onStateChanged: (cb: (state: AppSettings) => void) => void;
-  closePopup: () => void;
-  quit: () => void;
-}
-
-declare global {
-  interface Window {
-    electronAPI: ElectronAPI;
-  }
-}
 
 const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -118,6 +105,42 @@ async function addSchedule(): Promise<void> {
   await window.electronAPI.setState({ schedules: [...state.schedules, newSchedule] });
 }
 
+// ── Pause countdown ───────────────────────────────────────────────────────────
+
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
+
+function formatRemaining(ms: number): string {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `Paused — ${h}h ${m}m remaining`;
+  if (m > 0) return `Paused — ${m}m ${s}s remaining`;
+  return `Paused — ${s}s remaining`;
+}
+
+function startCountdown(untilMs: number): void {
+  stopCountdown();
+  const label = el('pause-label');
+  const update = () => {
+    const remaining = untilMs - Date.now();
+    if (remaining <= 0) {
+      stopCountdown();
+      return;
+    }
+    label.textContent = formatRemaining(remaining);
+  };
+  update();
+  countdownInterval = setInterval(update, 1000);
+}
+
+function stopCountdown(): void {
+  if (countdownInterval !== null) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+}
+
 // ── Apply state to UI ─────────────────────────────────────────────────────────
 
 function applyStateToUI(state: AppSettings): void {
@@ -133,6 +156,16 @@ function applyStateToUI(state: AppSettings): void {
   (el<HTMLInputElement>('neverOnBattery')).checked   = state.neverOnBattery;
   (el<HTMLInputElement>('neverOnLockScreen')).checked = state.neverOnLockScreen;
   (el<HTMLInputElement>('launchOnLogin')).checked    = state.launchOnLogin;
+
+  // Timed pause bar
+  const pauseBar = el('pause-bar');
+  if (state.pauseUntil !== null && state.pauseUntil > Date.now()) {
+    pauseBar.style.display = 'flex';
+    startCountdown(state.pauseUntil);
+  } else {
+    pauseBar.style.display = 'none';
+    stopCountdown();
+  }
 
   renderSchedules(state.schedules);
 }
@@ -176,6 +209,42 @@ async function init(): Promise<void> {
   // Launch on login
   el<HTMLInputElement>('launchOnLogin').addEventListener('change', e => {
     window.electronAPI.setState({ launchOnLogin: (e.target as HTMLInputElement).checked });
+  });
+
+  // Pause menu toggle
+  el('pause-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = el('pause-menu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Close pause menu when clicking outside
+  document.addEventListener('click', () => {
+    el('pause-menu').style.display = 'none';
+  });
+
+  // Pause options
+  document.querySelectorAll<HTMLButtonElement>('.pause-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el('pause-menu').style.display = 'none';
+      const minutes = btn.dataset.minutes;
+      const until = btn.dataset.until;
+      let untilMs: number;
+      if (until === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        untilMs = tomorrow.getTime();
+      } else {
+        untilMs = Date.now() + parseInt(minutes!, 10) * 60 * 1000;
+      }
+      window.electronAPI.pauseUntil(untilMs);
+    });
+  });
+
+  // Resume button in pause bar
+  el('pause-resume-btn').addEventListener('click', () => {
+    window.electronAPI.setState({ enabled: true });
   });
 
   // Add schedule

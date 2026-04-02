@@ -4,6 +4,7 @@ import { AppSettings, SettingsPatch } from './types';
 export interface ElectronAPI {
   getState: () => Promise<AppSettings>;
   setState: (patch: SettingsPatch) => Promise<AppSettings>;
+  pauseUntil: (untilMs: number) => Promise<AppSettings>;
   onStateChanged: (cb: (state: AppSettings) => void) => void;
   closePopup: () => void;
   quit: () => void;
@@ -21,6 +22,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   setState: (patch: SettingsPatch): Promise<AppSettings> =>
     ipcRenderer.invoke('set-state', patch),
+
+  pauseUntil: (untilMs: number): Promise<AppSettings> =>
+    ipcRenderer.invoke('pause-until', untilMs),
 
   onStateChanged: (cb: (state: AppSettings) => void): void => {
     ipcRenderer.on('state-changed', (_event, state: AppSettings) => cb(state));
