@@ -254,9 +254,8 @@ async function init(): Promise<void> {
   // Add schedule
   el('add-schedule').addEventListener('click', addSchedule);
 
-  // Close popup
   el('close-btn').addEventListener('click', () => {
-    window.electronAPI.closePopup();
+    window.electronAPI.quit();
   });
 
   // Open Accessibility settings
