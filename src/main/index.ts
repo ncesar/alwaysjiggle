@@ -1,4 +1,6 @@
 import { app, ipcMain, globalShortcut } from 'electron';
+
+app.setName('AlwaysJiggle');
 import store from './store';
 import * as trayManager from './tray';
 import * as jiggleEngine from './jiggleEngine';
