@@ -46,6 +46,8 @@ function createPopupWindow(): void {
   // Load the renderer HTML — path is relative to the project root at runtime
   popupWindow.loadFile(path.join(__dirname, '..', '..', 'src', 'renderer', 'index.html'));
 
+  popupWindow.on('blur', () => hidePopup());
+
   popupWindow.on('closed', () => {
     popupWindow = null;
   });
