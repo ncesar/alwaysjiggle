@@ -123,6 +123,10 @@ export function stop(): void {
 
 export function pause(): void {
   if (state !== 'running') return;
+  if (intervalHandle !== null) {
+    clearInterval(intervalHandle);
+    intervalHandle = null;
+  }
   stopZen();
   humanEngine.pause();
   state = 'paused';
@@ -138,6 +142,8 @@ export function resume(): void {
   if (mode === 'humanized') {
     humanEngine.resume();
   } else {
+    const intervalSec = store.get('interval');
+    intervalHandle = setInterval(tick, intervalSec * 1000);
     tick(); // fire once immediately on resume
   }
 
