@@ -297,6 +297,28 @@ input:checked + .slider::before {
   font-style: italic;
 }
 
+/* ── Schedule list ────────────────────────────────────────────────────────── */
+
+#schedules-list {
+  max-height: 270px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+#schedules-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+#schedules-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#schedules-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
 /* ── Schedule row ─────────────────────────────────────────────────────────── */
 
 .schedule-row {

@@ -106,3 +106,9 @@ export function updateTrayIcon(): void {
 export function getPopupWindow(): BrowserWindow | null {
   return popupWindow;
 }
+
+export function resizePopup(height: number): void {
+  if (!popupWindow || popupWindow.isDestroyed()) return;
+  const clamped = Math.min(Math.max(height, 300), 900);
+  popupWindow.setSize(320, clamped);
+}

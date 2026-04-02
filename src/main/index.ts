@@ -135,6 +135,10 @@ app.whenReady().then(() => {
     return store.store;
   });
 
+  ipcMain.on('resize-window', (_event, height: number) => {
+    trayManager.resizePopup(height);
+  });
+
   ipcMain.on('close-popup', () => {
     trayManager.hidePopup();
   });

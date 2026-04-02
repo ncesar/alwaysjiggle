@@ -5,6 +5,7 @@ interface ElectronAPI {
   setState: (patch: SettingsPatch) => Promise<AppSettings>;
   pauseUntil: (untilMs: number) => Promise<AppSettings>;
   onStateChanged: (cb: (state: AppSettings) => void) => void;
+  resizeWindow: (height: number) => void;
   closePopup: () => void;
   quit: () => void;
 }

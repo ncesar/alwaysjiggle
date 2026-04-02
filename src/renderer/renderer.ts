@@ -172,6 +172,8 @@ function applyStateToUI(state: AppSettings): void {
   }
 
   renderSchedules(state.schedules);
+  const panel = document.querySelector('.panel') as HTMLElement;
+  window.electronAPI.resizeWindow(panel.scrollHeight);
 }
 
 // ── Wiring ────────────────────────────────────────────────────────────────────
