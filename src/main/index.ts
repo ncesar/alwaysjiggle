@@ -50,6 +50,7 @@ app.whenReady().then(() => {
     () => {
       if (jiggleEngine.getState() === 'running') {
         jiggleEngine.pause();
+        trayManager.updateTrayIcon();
         pushStateToRenderer();
       }
     },
@@ -57,6 +58,7 @@ app.whenReady().then(() => {
     () => {
       if (jiggleEngine.getState() === 'paused' && store.get('enabled')) {
         jiggleEngine.resume();
+        trayManager.updateTrayIcon();
         pushStateToRenderer();
       }
     }

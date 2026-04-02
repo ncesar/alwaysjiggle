@@ -80,6 +80,7 @@ electron_1.app.whenReady().then(() => {
     () => {
         if (jiggleEngine.getState() === 'running') {
             jiggleEngine.pause();
+            trayManager.updateTrayIcon();
             pushStateToRenderer();
         }
     }, 
@@ -87,6 +88,7 @@ electron_1.app.whenReady().then(() => {
     () => {
         if (jiggleEngine.getState() === 'paused' && store_1.default.get('enabled')) {
             jiggleEngine.resume();
+            trayManager.updateTrayIcon();
             pushStateToRenderer();
         }
     });

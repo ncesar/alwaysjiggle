@@ -1,14 +1,29 @@
 import { Tray, BrowserWindow, nativeImage, app, globalShortcut } from 'electron';
 import path from 'path';
 import store from './store';
+import * as conditions from './conditions';
+import { isWithinSchedule } from './scheduler';
 
 let tray: Tray | null = null;
 let popupWindow: BrowserWindow | null = null;
 
-function getIconPath(active: boolean): string {
-  const name = active ? 'tray-active' : 'tray-inactive';
-  return path.join(__dirname, '..', '..', 'build', `${name}.png`);
+function getTrayTitle(): string {
+  if (!store.get('enabled')) return '⏸ Paused';
+
+  const pauseUntil = store.get('pauseUntil');
+  if (pauseUntil !== null && pauseUntil > Date.now()) return '⏸ Paused';
+
+  const { onBattery } = conditions.getState();
+  if (store.get('neverOnBattery') && onBattery) return '⚡ Battery pause';
+
+  if (!isWithinSchedule()) return '🕒 Scheduled off';
+
+  const mode = store.get('mode');
+  if (mode === 'humanized') return '🧠 Jiggling(Human)';
+  if (mode === 'zen') return '🟢 Jiggling(Zen)';
+  return '🟢 Jiggling(Standard)';
 }
+
 
 function createPopupWindow(): void {
   popupWindow = new BrowserWindow({
@@ -65,11 +80,8 @@ export function hidePopup(): void {
 }
 
 export function init(): void {
-  const active = store.get('enabled');
-  const img = nativeImage.createFromPath(getIconPath(active));
-  img.setTemplateImage(true);
-
-  tray = new Tray(img);
+  tray = new Tray(nativeImage.createEmpty());
+  tray.setTitle(getTrayTitle());
   tray.setToolTip('AlwaysJiggle');
 
   createPopupWindow();
@@ -88,10 +100,7 @@ export function init(): void {
 
 export function updateTrayIcon(): void {
   if (!tray) return;
-  const active = store.get('enabled');
-  const img = nativeImage.createFromPath(getIconPath(active));
-  img.setTemplateImage(true);
-  tray.setImage(img);
+  tray.setTitle(getTrayTitle());
 }
 
 export function getPopupWindow(): BrowserWindow | null {
