@@ -1,5 +1,6 @@
 import type { AppSettings, Schedule } from '../main/types';
 
+import type {} from './global.d';
 
 const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -157,13 +158,16 @@ function applyStateToUI(state: AppSettings): void {
   (el<HTMLInputElement>('neverOnLockScreen')).checked = state.neverOnLockScreen;
   (el<HTMLInputElement>('launchOnLogin')).checked    = state.launchOnLogin;
 
-  // Timed pause bar
+  // Timed pause bar + button active state
   const pauseBar = el('pause-bar');
+  const pauseBtn = el('pause-btn');
   if (state.pauseUntil !== null && state.pauseUntil > Date.now()) {
     pauseBar.style.display = 'flex';
+    pauseBtn.classList.add('active');
     startCountdown(state.pauseUntil);
   } else {
     pauseBar.style.display = 'none';
+    pauseBtn.classList.remove('active');
     stopCountdown();
   }
 

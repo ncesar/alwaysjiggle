@@ -124,14 +124,17 @@ function applyStateToUI(state) {
     (el('neverOnBattery')).checked = state.neverOnBattery;
     (el('neverOnLockScreen')).checked = state.neverOnLockScreen;
     (el('launchOnLogin')).checked = state.launchOnLogin;
-    // Timed pause bar
+    // Timed pause bar + button active state
     const pauseBar = el('pause-bar');
+    const pauseBtn = el('pause-btn');
     if (state.pauseUntil !== null && state.pauseUntil > Date.now()) {
         pauseBar.style.display = 'flex';
+        pauseBtn.classList.add('active');
         startCountdown(state.pauseUntil);
     }
     else {
         pauseBar.style.display = 'none';
+        pauseBtn.classList.remove('active');
         stopCountdown();
     }
     renderSchedules(state.schedules);

@@ -438,18 +438,27 @@ input:checked + .slider::before {
 
 .pause-btn {
   background: none;
-  border: none;
-  color: var(--text-secondary);
+  border: 1px solid #8a5a00;
+  color: #f5a623;
   cursor: pointer;
-  font-size: 14px;
-  padding: 2px 4px;
+  font-size: 13px;
+  padding: 3px 7px;
   border-radius: var(--radius-sm);
   line-height: 1;
+  transition: all 0.15s;
 }
 
 .pause-btn:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
+  color: #f5a623;
+  border-color: #f5a623;
+  background: rgba(245, 166, 35, 0.1);
+}
+
+/* Active state — shown while a timed pause is running */
+.pause-btn.active {
+  color: #f5a623;
+  border-color: #f5a623;
+  background: rgba(245, 166, 35, 0.15);
 }
 
 .pause-menu {
@@ -459,9 +468,9 @@ input:checked + .slider::before {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  min-width: 160px;
+  min-width: 170px;
   z-index: 100;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
   overflow: hidden;
 }
 
@@ -473,13 +482,14 @@ input:checked + .slider::before {
   color: var(--text-primary);
   font-size: 13px;
   text-align: left;
-  padding: 8px 12px;
+  padding: 9px 14px;
   cursor: pointer;
   transition: background 0.1s;
 }
 
 .pause-option:hover {
   background: var(--bg-hover);
+  color: #f5a623;
 }
 
 /* ── Pause bar ────────────────────────────────────────────────────────────── */
@@ -488,24 +498,30 @@ input:checked + .slider::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 14px;
-  background: #2a2010;
-  border-bottom: 1px solid #5a4020;
-  font-size: 12px;
-  color: #ffcc66;
+  padding: 10px 14px;
+  background: #2d1f00;
+  border-bottom: 2px solid #f5a623;
+}
+
+.pause-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f5a623;
+  letter-spacing: -0.1px;
 }
 
 .pause-resume-btn {
-  background: none;
-  border: 1px solid #5a4020;
-  color: #ffcc66;
+  background: #f5a623;
+  border: none;
+  color: #1a1000;
   cursor: pointer;
-  font-size: 11px;
-  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
   border-radius: var(--radius-sm);
   transition: background 0.1s;
 }
 
 .pause-resume-btn:hover {
-  background: rgba(255, 204, 102, 0.15);
+  background: #ffc04d;
 }
