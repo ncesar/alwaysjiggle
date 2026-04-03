@@ -1,6 +1,7 @@
 import type { AppSettings, SettingsPatch } from '../main/types';
 
 interface ElectronAPI {
+  getVersion: () => Promise<string>;
   getState: () => Promise<AppSettings>;
   setState: (patch: SettingsPatch) => Promise<AppSettings>;
   pauseUntil: (untilMs: number) => Promise<AppSettings>;

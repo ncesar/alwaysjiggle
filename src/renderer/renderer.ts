@@ -179,7 +179,11 @@ function applyStateToUI(state: AppSettings): void {
 // ── Wiring ────────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
-  const state = await window.electronAPI.getState();
+  const [state, version] = await Promise.all([
+    window.electronAPI.getState(),
+    window.electronAPI.getVersion(),
+  ]);
+  el('app-version').textContent = `v${version} ·`;
   applyStateToUI(state);
 
   // Push updates from main (e.g., conditions block/unblock)

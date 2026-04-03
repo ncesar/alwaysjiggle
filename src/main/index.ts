@@ -7,6 +7,7 @@ import * as jiggleEngine from './jiggleEngine';
 import * as conditions from './conditions';
 import { isWithinSchedule } from './scheduler';
 import { SettingsPatch } from './types';
+import pkg from '../../package.json';
 
 let timedPauseHandle: ReturnType<typeof setTimeout> | null = null;
 
@@ -102,6 +103,8 @@ app.whenReady().then(() => {
   }, 30_000);
 
   // ── IPC Handlers ──────────────────────────────────────────────────────────
+
+  ipcMain.handle('get-version', () => pkg.version);
 
   ipcMain.handle('get-state', () => {
     return store.store;
