@@ -179,11 +179,21 @@ function applyStateToUI(state: AppSettings): void {
 // ── Wiring ────────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
-  const [state, version] = await Promise.all([
+  const [state, version, updateInfo] = await Promise.all([
     window.electronAPI.getState(),
     window.electronAPI.getVersion(),
+    window.electronAPI.getUpdateInfo(),
   ]);
   el('app-version').textContent = `v${version} ·`;
+  if (updateInfo?.hasUpdate) {
+    const link = el<HTMLAnchorElement>('update-link');
+    link.textContent = `v${updateInfo.latestVersion} available · Download`;
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      window.electronAPI.openUrl(updateInfo.releaseUrl);
+    });
+    el('update-notice').style.display = 'block';
+  }
   applyStateToUI(state);
 
   // Push updates from main (e.g., conditions block/unblock)

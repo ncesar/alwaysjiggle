@@ -3,6 +3,7 @@ import { AppSettings, SettingsPatch } from './types';
 
 export interface ElectronAPI {
   getVersion: () => Promise<string>;
+  getUpdateInfo: () => Promise<{ hasUpdate: boolean; latestVersion: string; releaseUrl: string } | null>;
   getState: () => Promise<AppSettings>;
   setState: (patch: SettingsPatch) => Promise<AppSettings>;
   pauseUntil: (untilMs: number) => Promise<AppSettings>;
@@ -22,6 +23,9 @@ declare global {
 contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: (): Promise<string> =>
     ipcRenderer.invoke('get-version'),
+
+  getUpdateInfo: (): Promise<{ hasUpdate: boolean; latestVersion: string; releaseUrl: string } | null> =>
+    ipcRenderer.invoke('get-update-info'),
 
   getState: (): Promise<AppSettings> =>
     ipcRenderer.invoke('get-state'),

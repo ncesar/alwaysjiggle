@@ -11,6 +11,29 @@ import pkg from '../../package.json';
 
 let timedPauseHandle: ReturnType<typeof setTimeout> | null = null;
 
+interface UpdateInfo {
+  hasUpdate: boolean;
+  latestVersion: string;  // v-prefix stripped, e.g. "1.3"
+  releaseUrl: string;
+}
+let cachedUpdateInfo: UpdateInfo | null = null;
+
+async function checkForUpdate(): Promise<void> {
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/ncesar/AlwaysJiggle/releases/latest',
+      { headers: { 'User-Agent': 'AlwaysJiggle-updater' } }
+    );
+    if (!res.ok) return;
+    const data = await res.json() as { tag_name: string; html_url: string };
+    const latest  = data.tag_name.replace(/^v/i, '');
+    const current = pkg.version.replace(/^v/i, '');
+    cachedUpdateInfo = { hasUpdate: latest !== current, latestVersion: latest, releaseUrl: data.html_url };
+  } catch {
+    // offline or API error — leave cache null, show nothing
+  }
+}
+
 function clearTimedPause(): void {
   if (timedPauseHandle !== null) {
     clearTimeout(timedPauseHandle);
@@ -89,6 +112,9 @@ app.whenReady().then(() => {
     jiggleEngine.start();
   }
 
+  // Check for updates 5 s after startup so it doesn't delay launch
+  setTimeout(() => { checkForUpdate(); }, 5_000);
+
   // Poll every 30 seconds to catch schedule window open/close transitions and
   // keep the tray title in sync (tick() already skips jiggling outside the
   // schedule, but updateTrayIcon is only called on user-driven state changes).
@@ -105,6 +131,7 @@ app.whenReady().then(() => {
   // ── IPC Handlers ──────────────────────────────────────────────────────────
 
   ipcMain.handle('get-version', () => pkg.version);
+  ipcMain.handle('get-update-info', () => cachedUpdateInfo);
 
   ipcMain.handle('get-state', () => {
     return store.store;

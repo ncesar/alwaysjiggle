@@ -466,6 +466,21 @@ input:checked + .slider::before {
   text-decoration: underline;
 }
 
+#update-notice {
+  margin-top: 3px;
+}
+
+.update-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.update-link:hover {
+  text-decoration: underline;
+}
+
 .select-input:disabled {
   opacity: 0.4;
   cursor: not-allowed;
