@@ -1,10 +1,11 @@
-import { app, ipcMain, globalShortcut } from 'electron';
+import { app, ipcMain, globalShortcut, shell } from 'electron';
 
 app.setName('AlwaysJiggle');
 import store from './store';
 import * as trayManager from './tray';
 import * as jiggleEngine from './jiggleEngine';
 import * as conditions from './conditions';
+import { isWithinSchedule } from './scheduler';
 import { SettingsPatch } from './types';
 
 let timedPauseHandle: ReturnType<typeof setTimeout> | null = null;
@@ -87,6 +88,19 @@ app.whenReady().then(() => {
     jiggleEngine.start();
   }
 
+  // Poll every 30 seconds to catch schedule window open/close transitions and
+  // keep the tray title in sync (tick() already skips jiggling outside the
+  // schedule, but updateTrayIcon is only called on user-driven state changes).
+  let lastInSchedule = isWithinSchedule();
+  setInterval(() => {
+    const inSchedule = isWithinSchedule();
+    if (inSchedule !== lastInSchedule) {
+      lastInSchedule = inSchedule;
+      trayManager.updateTrayIcon();
+      pushStateToRenderer();
+    }
+  }, 30_000);
+
   // ── IPC Handlers ──────────────────────────────────────────────────────────
 
   ipcMain.handle('get-state', () => {
@@ -133,6 +147,10 @@ app.whenReady().then(() => {
     trayManager.updateTrayIcon();
     pushStateToRenderer();
     return store.store;
+  });
+
+  ipcMain.on('open-url', (_event, url: string) => {
+    shell.openExternal(url);
   });
 
   ipcMain.on('resize-window', (_event, height: number) => {

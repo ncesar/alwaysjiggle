@@ -447,6 +447,25 @@ input:checked + .slider::before {
   color: var(--danger);
 }
 
+.credits {
+  padding: 6px 14px 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+}
+
+.credits-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.credits-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
 .select-input:disabled {
   opacity: 0.4;
   cursor: not-allowed;

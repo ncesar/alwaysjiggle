@@ -268,6 +268,14 @@ async function init(): Promise<void> {
     window.electronAPI.setState({} as Partial<AppSettings>);
   });
 
+  // Credits links
+  document.querySelectorAll<HTMLAnchorElement>('.credits-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      window.electronAPI.openUrl(link.dataset.url!);
+    });
+  });
+
   // Quit
   el('quit-btn').addEventListener('click', () => {
     window.electronAPI.quit();

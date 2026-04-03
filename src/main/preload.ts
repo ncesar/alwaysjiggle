@@ -7,6 +7,7 @@ export interface ElectronAPI {
   pauseUntil: (untilMs: number) => Promise<AppSettings>;
   onStateChanged: (cb: (state: AppSettings) => void) => void;
   resizeWindow: (height: number) => void;
+  openUrl: (url: string) => void;
   closePopup: () => void;
   quit: () => void;
 }
@@ -33,6 +34,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   resizeWindow: (height: number): void => {
     ipcRenderer.send('resize-window', height);
+  },
+
+  openUrl: (url: string): void => {
+    ipcRenderer.send('open-url', url);
   },
 
   closePopup: (): void => {
