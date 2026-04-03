@@ -1,0 +1,35 @@
+name: Release on version bump
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get current version
+        id: current
+        run: echo "version=$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
+
+      - name: Get previous version
+        id: previous
+        run: |
+          PREV=$(git show HEAD~1:package.json 2>/dev/null | jq -r '.version // empty' || echo "")
+          echo "version=$PREV" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        if: steps.current.outputs.version != steps.previous.outputs.version
+        run: |
+          gh release create "v${{ steps.current.outputs.version }}" \
+            --title "v${{ steps.current.outputs.version }}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
