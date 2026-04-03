@@ -6,7 +6,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     permissions:
       contents: write
 
@@ -25,11 +25,29 @@ jobs:
           PREV=$(git show HEAD~1:package.json 2>/dev/null | jq -r '.version // empty' || echo "")
           echo "version=$PREV" >> $GITHUB_OUTPUT
 
-      - name: Create release
+      - name: Setup Node.js
+        if: steps.current.outputs.version != steps.previous.outputs.version
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        if: steps.current.outputs.version != steps.previous.outputs.version
+        run: npm ci
+
+      - name: Build DMG
+        if: steps.current.outputs.version != steps.previous.outputs.version
+        run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # skip code signing
+
+      - name: Create release and attach DMG
         if: steps.current.outputs.version != steps.previous.outputs.version
         run: |
+          DMG=$(find dist -name "*.dmg" | head -1)
           gh release create "v${{ steps.current.outputs.version }}" \
             --title "v${{ steps.current.outputs.version }}" \
-            --generate-notes
+            --generate-notes \
+            "$DMG"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
