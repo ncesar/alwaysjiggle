@@ -37,7 +37,7 @@ jobs:
 
       - name: Build DMG
         if: steps.current.outputs.version != steps.previous.outputs.version
-        run: npm run dist
+        run: npm run build && npx electron-builder --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false  # skip code signing
 
