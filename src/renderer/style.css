@@ -412,7 +412,7 @@ input:checked + .slider::before {
   color: var(--text-primary);
   font-size: 12px;
   padding: 4px 6px;
-  width: 72px;
+  width: 90px;
   text-align: center;
 }
 
