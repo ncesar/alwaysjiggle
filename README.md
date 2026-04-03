@@ -1,5 +1,7 @@
 # AlwaysJiggle
 
+![AlwaysJiggle screenshot](screenshot.png)
+
 A macOS menu bar app that keeps your machine awake and your status green — no more "away" on Slack or Teams while you step away for coffee.
 
 ---
