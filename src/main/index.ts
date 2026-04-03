@@ -112,9 +112,6 @@ app.whenReady().then(() => {
     jiggleEngine.start();
   }
 
-  // Check for updates 5 s after startup so it doesn't delay launch
-  setTimeout(() => { checkForUpdate(); }, 5_000);
-
   // Poll every 30 seconds to catch schedule window open/close transitions and
   // keep the tray title in sync (tick() already skips jiggling outside the
   // schedule, but updateTrayIcon is only called on user-driven state changes).
@@ -131,7 +128,10 @@ app.whenReady().then(() => {
   // ── IPC Handlers ──────────────────────────────────────────────────────────
 
   ipcMain.handle('get-version', () => pkg.version);
-  ipcMain.handle('get-update-info', () => cachedUpdateInfo);
+  ipcMain.handle('get-update-info', async () => {
+    if (cachedUpdateInfo === null) await checkForUpdate();
+    return cachedUpdateInfo;
+  });
 
   ipcMain.handle('get-state', () => {
     return store.store;
