@@ -581,3 +581,14 @@ input:checked + .slider::before {
 .pause-resume-btn:hover {
   background: #ffc04d;
 }
+
+/* ── Schedule-off bar ─────────────────────────────────────────────────────── */
+
+.schedule-off-bar {
+  padding: 8px 14px;
+  background: #1a2030;
+  border-bottom: 2px solid #4a9eff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a9eff;
+}

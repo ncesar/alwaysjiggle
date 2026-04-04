@@ -15,6 +15,7 @@ export interface AppSettings {
   neverOnLockScreen: boolean;
   schedules: Schedule[];
   pauseUntil: number | null; // ms timestamp; null = no timed pause
+  scheduledOff?: boolean; // computed at send time; true when current time is outside all schedule windows
 }
 
 export type SettingsPatch = Partial<AppSettings>;

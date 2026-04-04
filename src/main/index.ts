@@ -81,10 +81,12 @@ app.whenReady().then(() => {
         pushStateToRenderer();
       }
     },
-    // onUnblock: resume if we were paused (and still enabled)
+    // onUnblock: resume if we were paused, still enabled, not in a timed pause, and schedule allows it
     () => {
-      if (jiggleEngine.getState() === 'paused' && store.get('enabled')) {
-        jiggleEngine.resume();
+      if (jiggleEngine.getState() === 'paused' && store.get('enabled') && store.get('pauseUntil') === null) {
+        if (isWithinSchedule()) {
+          jiggleEngine.resume();
+        }
         trayManager.updateTrayIcon();
         pushStateToRenderer();
       }
@@ -93,6 +95,10 @@ app.whenReady().then(() => {
 
   // Create tray and popup window
   trayManager.init();
+
+  // Push fresh computed state whenever the popup becomes visible,
+  // in case it missed updates while hidden (e.g. Mac was locked).
+  trayManager.getPopupWindow()?.on('show', () => pushStateToRenderer());
 
   // Apply persisted login item setting
   applyLoginSetting();
@@ -112,14 +118,23 @@ app.whenReady().then(() => {
     jiggleEngine.start();
   }
 
-  // Poll every 30 seconds to catch schedule window open/close transitions and
-  // keep the tray title in sync (tick() already skips jiggling outside the
-  // schedule, but updateTrayIcon is only called on user-driven state changes).
+  // Poll every 30 seconds to catch schedule window open/close transitions.
+  // Actively pause/resume the engine on transitions so Zen mode's caffeinate
+  // process is properly stopped when the schedule ends.
   let lastInSchedule = isWithinSchedule();
   setInterval(() => {
     const inSchedule = isWithinSchedule();
     if (inSchedule !== lastInSchedule) {
       lastInSchedule = inSchedule;
+      if (!inSchedule && jiggleEngine.getState() === 'running') {
+        jiggleEngine.pause();
+      } else if (inSchedule
+                 && jiggleEngine.getState() === 'paused'
+                 && store.get('enabled')
+                 && store.get('pauseUntil') === null
+                 && !conditions.isBlocked()) {
+        jiggleEngine.resume();
+      }
       trayManager.updateTrayIcon();
       pushStateToRenderer();
     }
@@ -134,7 +149,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('get-state', () => {
-    return store.store;
+    return getComputedState();
   });
 
   ipcMain.handle('set-state', (_event, patch: SettingsPatch) => {
@@ -198,10 +213,14 @@ app.whenReady().then(() => {
   });
 });
 
+function getComputedState() {
+  return { ...store.store, scheduledOff: !isWithinSchedule() };
+}
+
 function pushStateToRenderer(): void {
   const win = trayManager.getPopupWindow();
-  if (win && !win.isDestroyed() && win.isVisible()) {
-    win.webContents.send('state-changed', store.store);
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('state-changed', getComputedState());
   }
 }
 

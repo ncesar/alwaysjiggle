@@ -171,6 +171,8 @@ function applyStateToUI(state: AppSettings): void {
     stopCountdown();
   }
 
+  el('schedule-off-bar').style.display = state.scheduledOff ? 'block' : 'none';
+
   renderSchedules(state.schedules);
   const panel = document.querySelector('.panel') as HTMLElement;
   window.electronAPI.resizeWindow(panel.scrollHeight);
