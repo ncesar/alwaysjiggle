@@ -1,4 +1,4 @@
-import { app, ipcMain, globalShortcut, shell } from 'electron';
+import { app, ipcMain, globalShortcut, shell, powerMonitor } from 'electron';
 
 app.setName('AlwaysJiggle');
 import store from './store';
@@ -10,6 +10,7 @@ import { SettingsPatch } from './types';
 import pkg from '../../package.json';
 
 let timedPauseHandle: ReturnType<typeof setTimeout> | null = null;
+let lastInSchedule = false; // initialised inside whenReady once the store is ready
 
 interface UpdateInfo {
   hasUpdate: boolean;
@@ -118,11 +119,10 @@ app.whenReady().then(() => {
     jiggleEngine.start();
   }
 
-  // Poll every 30 seconds to catch schedule window open/close transitions.
-  // Actively pause/resume the engine on transitions so Zen mode's caffeinate
-  // process is properly stopped when the schedule ends.
-  let lastInSchedule = isWithinSchedule();
-  setInterval(() => {
+  // Sync engine state to the current schedule window.
+  // Called on the 30s poll, on system resume (sleep/wake), and on unlock.
+  lastInSchedule = isWithinSchedule();
+  function syncSchedule(): void {
     const inSchedule = isWithinSchedule();
     if (inSchedule !== lastInSchedule) {
       lastInSchedule = inSchedule;
@@ -138,7 +138,13 @@ app.whenReady().then(() => {
       trayManager.updateTrayIcon();
       pushStateToRenderer();
     }
-  }, 30_000);
+  }
+
+  setInterval(syncSchedule, 30_000);
+
+  // setInterval is paused during system sleep, so the 30s poll never fires
+  // while the machine is suspended. Re-evaluate the schedule immediately on wake.
+  powerMonitor.on('resume', syncSchedule);
 
   // ── IPC Handlers ──────────────────────────────────────────────────────────
 
