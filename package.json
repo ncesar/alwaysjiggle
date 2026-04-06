@@ -1,6 +1,6 @@
 {
   "name": "always-jiggle",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "macOS menu bar mouse jiggler and system activity simulator",
   "main": "dist/main/index.js",
   "scripts": {
