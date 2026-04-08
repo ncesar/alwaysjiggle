@@ -231,6 +231,11 @@ function pushStateToRenderer(): void {
 }
 
 function applyLoginSetting(): void {
+  if (!app.isPackaged) {
+    // Dev mode: unregister any stale login item pointing to the raw Electron binary
+    app.setLoginItemSettings({ openAtLogin: false });
+    return;
+  }
   app.setLoginItemSettings({
     openAtLogin: store.get('launchOnLogin'),
     openAsHidden: true,
