@@ -25,12 +25,13 @@ function isScheduleActive(schedule: Schedule, dayOfWeek: number, currentMinutes:
 export function isWithinSchedule(): boolean {
   const schedules = store.get('schedules');
 
-  // No schedules configured → always allowed
-  if (!schedules || schedules.length === 0) return true;
+  // No schedules, or all disabled → always allowed
+  const active = schedules?.filter(s => s.enabled) ?? [];
+  if (active.length === 0) return true;
 
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0=Sun
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  return schedules.some(s => isScheduleActive(s, dayOfWeek, currentMinutes));
+  return active.some(s => isScheduleActive(s, dayOfWeek, currentMinutes));
 }

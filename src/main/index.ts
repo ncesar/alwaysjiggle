@@ -182,6 +182,10 @@ app.whenReady().then(() => {
       jiggleEngine.restart();
     }
 
+    if ('schedules' in patch) {
+      syncSchedule();
+    }
+
     if ('launchOnLogin' in patch) {
       applyLoginSetting();
     }
