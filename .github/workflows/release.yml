@@ -44,7 +44,7 @@ jobs:
       - name: Create release and attach DMG
         if: steps.current.outputs.version != steps.previous.outputs.version
         run: |
-          DMG=$(find dist -name "*.dmg" | head -1)
+          DMG=$(find release -name "*.dmg" | head -1)
           gh release create "v${{ steps.current.outputs.version }}" \
             --title "v${{ steps.current.outputs.version }}" \
             --generate-notes \

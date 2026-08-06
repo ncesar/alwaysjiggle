@@ -101,6 +101,11 @@ app.whenReady().then(() => {
   // in case it missed updates while hidden (e.g. Mac was locked).
   trayManager.getPopupWindow()?.on('show', () => pushStateToRenderer());
 
+  const health = jiggleEngine.getHealth();
+  console.log('[startup] helper=%s accessibility=%s',
+    health.helper,
+    health.accessibilityGranted ? 'granted' : 'NOT GRANTED');
+
   // Apply persisted login item setting
   applyLoginSetting();
 
@@ -135,9 +140,13 @@ app.whenReady().then(() => {
                  && !conditions.isBlocked()) {
         jiggleEngine.resume();
       }
-      trayManager.updateTrayIcon();
       pushStateToRenderer();
     }
+    // Outside the transition guard: helper health and Accessibility can change
+    // at any time (a macOS update silently drops the grant), and none of the
+    // other updateTrayIcon() call sites correlate with that. Without this the
+    // ⚠️ state could sit unnoticed for hours. One cached probe per 30s.
+    trayManager.updateTrayIcon();
   }
 
   setInterval(syncSchedule, 30_000);
@@ -149,6 +158,7 @@ app.whenReady().then(() => {
   // ── IPC Handlers ──────────────────────────────────────────────────────────
 
   ipcMain.handle('get-version', () => pkg.version);
+  ipcMain.handle('get-health', () => jiggleEngine.getHealth());
   ipcMain.handle('get-update-info', async () => {
     if (cachedUpdateInfo === null) await checkForUpdate();
     return cachedUpdateInfo;
@@ -206,6 +216,10 @@ app.whenReady().then(() => {
 
   ipcMain.on('open-url', (_event, url: string) => {
     shell.openExternal(url);
+  });
+
+  ipcMain.on('open-accessibility-settings', () => {
+    shell.openExternal('x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility');
   });
 
   ipcMain.on('resize-window', (_event, height: number) => {

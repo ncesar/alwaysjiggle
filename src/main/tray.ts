@@ -3,6 +3,7 @@ import path from 'path';
 import store from './store';
 import * as conditions from './conditions';
 import { isWithinSchedule } from './scheduler';
+import * as helper from './helper';
 
 let tray: Tray | null = null;
 let popupWindow: BrowserWindow | null = null;
@@ -12,6 +13,12 @@ function getTrayTitle(): string {
 
   const pauseUntil = store.get('pauseUntil');
   if (pauseUntil !== null && pauseUntil > Date.now()) return '⏸';
+
+  // The tray is the only always-visible surface. Showing 🟢 while the helper is
+  // missing or Accessibility is denied is exactly the silent failure that made
+  // every released build look healthy while doing nothing. (Cached — see helper.)
+  const health = helper.checkHealth();
+  if (health.status !== 'ok' || !health.canPostEvents) return '⚠️';
 
   const { onBattery } = conditions.getState();
   if (store.get('neverOnBattery') && onBattery) return '⚡';

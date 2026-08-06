@@ -3,6 +3,7 @@ import { AppSettings, SettingsPatch } from './types';
 
 export interface ElectronAPI {
   getVersion: () => Promise<string>;
+  getHealth: () => Promise<{ helper: 'ok' | 'missing' | 'error'; accessibilityGranted: boolean }>;
   getUpdateInfo: () => Promise<{ hasUpdate: boolean; latestVersion: string; releaseUrl: string } | null>;
   getState: () => Promise<AppSettings>;
   setState: (patch: SettingsPatch) => Promise<AppSettings>;
@@ -10,6 +11,7 @@ export interface ElectronAPI {
   onStateChanged: (cb: (state: AppSettings) => void) => void;
   resizeWindow: (height: number) => void;
   openUrl: (url: string) => void;
+  openAccessibilitySettings: () => void;
   closePopup: () => void;
   quit: () => void;
 }
@@ -23,6 +25,9 @@ declare global {
 contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: (): Promise<string> =>
     ipcRenderer.invoke('get-version'),
+
+  getHealth: (): Promise<{ helper: 'ok' | 'missing' | 'error'; accessibilityGranted: boolean }> =>
+    ipcRenderer.invoke('get-health'),
 
   getUpdateInfo: (): Promise<{ hasUpdate: boolean; latestVersion: string; releaseUrl: string } | null> =>
     ipcRenderer.invoke('get-update-info'),
@@ -46,6 +51,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   openUrl: (url: string): void => {
     ipcRenderer.send('open-url', url);
+  },
+
+  openAccessibilitySettings: (): void => {
+    ipcRenderer.send('open-accessibility-settings');
   },
 
   closePopup: (): void => {

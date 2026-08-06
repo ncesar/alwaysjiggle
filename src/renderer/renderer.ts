@@ -144,6 +144,48 @@ function stopCountdown(): void {
 
 // ── Apply state to UI ─────────────────────────────────────────────────────────
 
+type Health = Awaited<ReturnType<typeof window.electronAPI.getHealth>>;
+
+let health: Health = { helper: 'ok', accessibilityGranted: true };
+
+async function refreshHealth(): Promise<void> {
+  // Never let a health failure take down the popup — a stale banner is far
+  // better than a UI that never wires up its listeners.
+  health = await window.electronAPI.getHealth().catch(() => health);
+}
+
+function renderHealthBanner(): void {
+  const banner = el('accessibility-warning');
+  const text = el('accessibility-warning-text');
+  const link = el('open-accessibility');
+
+  // "missing" means the build is broken; "error" means it is there but failed —
+  // telling someone to reinstall over a transient failure sends them in circles.
+  if (health.helper === 'missing') {
+    text.innerHTML = '⚠️ The native helper is missing from this build — no mode can simulate activity.<br>Please reinstall AlwaysJiggle.';
+    banner.style.display = 'block';
+    link.style.display = 'none';
+    return;
+  }
+
+  if (health.helper === 'error') {
+    text.innerHTML = '⚠️ The native helper could not run. Try quitting and reopening AlwaysJiggle.';
+    banner.style.display = 'block';
+    link.style.display = 'none';
+    return;
+  }
+
+  // Every mode posts HID events to reset the idle timer, so all need Accessibility.
+  if (!health.accessibilityGranted) {
+    text.innerHTML = '⚠️ Accessibility permission required — without it AlwaysJiggle cannot keep your status active.';
+    banner.style.display = 'block';
+    link.style.display = 'inline';
+    return;
+  }
+
+  banner.style.display = 'none';
+}
+
 function applyStateToUI(state: AppSettings): void {
   (el<HTMLInputElement>('enabled')).checked = state.enabled;
 
@@ -172,8 +214,13 @@ function applyStateToUI(state: AppSettings): void {
   }
 
   el('schedule-off-bar').style.display = state.scheduledOff ? 'block' : 'none';
+  renderHealthBanner();
 
   renderSchedules(state.schedules);
+  resizeToContent();
+}
+
+function resizeToContent(): void {
   const panel = document.querySelector('.panel') as HTMLElement;
   window.electronAPI.resizeWindow(panel.scrollHeight);
 }
@@ -185,6 +232,7 @@ async function init(): Promise<void> {
     window.electronAPI.getState(),
     window.electronAPI.getVersion(),
     window.electronAPI.getUpdateInfo(),
+    refreshHealth(),
   ]);
   el('app-version').textContent = `v${version} ·`;
   if (updateInfo?.hasUpdate) {
@@ -198,8 +246,19 @@ async function init(): Promise<void> {
   }
   applyStateToUI(state);
 
-  // Push updates from main (e.g., conditions block/unblock)
-  window.electronAPI.onStateChanged(applyStateToUI);
+  // Push updates from main (e.g., conditions block/unblock). Main also pushes on
+  // popup 'show', so re-reading health here is what lets the banner clear itself
+  // after the user grants permission and reopens the popup.
+  window.electronAPI.onStateChanged(state => {
+    applyStateToUI(state);
+    void refreshHealth().then(() => {
+      renderHealthBanner();
+      // The banner is ~60px tall and this render lands after applyStateToUI
+      // already resized, so the window must be re-measured or it ends up with a
+      // gap (banner just hidden) or clipped content (banner just shown).
+      resizeToContent();
+    }).catch(console.error);
+  });
 
   // Enable toggle
   el<HTMLInputElement>('enabled').addEventListener('change', e => {
@@ -279,9 +338,7 @@ async function init(): Promise<void> {
   // Open Accessibility settings
   el('open-accessibility').addEventListener('click', e => {
     e.preventDefault();
-    // Trigger main to open System Preferences via shell
-    // We reuse setState as a simple message carrier
-    window.electronAPI.setState({} as Partial<AppSettings>);
+    window.electronAPI.openAccessibilitySettings();
   });
 
   // Credits links

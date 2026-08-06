@@ -8,12 +8,16 @@ A macOS menu bar app that keeps your machine awake and your status green — no 
 
 ## Features
 
-- **Standard mode** — nudges the mouse cursor by 2px and back every N seconds (requires Accessibility permission)
-- **Zen mode** — keeps the display awake and resets the idle timer via a native macOS API, with no cursor movement and no Accessibility permission required
+- **Standard mode** — nudges the mouse cursor by 2px and back every N seconds
+- **Zen mode** — keeps the display awake and resets the idle timer with no visible cursor movement
 - **Humanized mode** — irregular timing with randomized bursts, breaks, and idle phases to mimic real human activity
 - **Schedules** — configure active days and time windows (e.g. Mon–Fri, 9am–5pm)
 - **Smart pausing** — auto-pauses on battery, on lock screen, or for a timed duration (15 min / 1 hour / until tomorrow)
 - **Launch on login** — starts automatically with macOS
+
+> **All three modes require Accessibility permission.** macOS only counts real input
+> events toward the idle timer that Slack and Teams read — simply moving the cursor
+> does not keep a status active.
 
 ---
 
@@ -30,6 +34,18 @@ xattr -cr /Applications/AlwaysJiggle.app
 ```
 
 Then open it normally.
+
+### Grant Accessibility permission
+
+Open **System Settings → Privacy & Security → Accessibility** and enable AlwaysJiggle.
+
+If you are **updating** from an earlier version, select the existing AlwaysJiggle row
+and remove it with the **−** button first, then add the new app. Because the app is not
+signed with an Apple Developer certificate, macOS ties the permission to that exact
+build — after an update the old entry still appears enabled but no longer applies, and
+AlwaysJiggle will silently do nothing.
+
+The app shows a warning banner whenever the permission is missing.
 
 ---
 
@@ -87,6 +103,7 @@ src/
     humanEngine.ts    # Humanized timing state machine
     conditions.ts     # Battery and lock screen monitoring
     scheduler.ts      # Schedule evaluation
+    helper.ts         # Swift helper path resolution, invocation, health probe
     store.ts          # Persistent settings (electron-store)
     preload.ts        # Context bridge for renderer IPC
     types.ts          # Shared TypeScript interfaces
@@ -95,7 +112,8 @@ src/
     renderer.ts       # UI logic and state binding
     style.css         # Styles
 helpers/
-  jiggle-helper.swift # Native Swift binary (mouse, zen, idle)
+  jiggle-helper.swift # Native Swift helper source (mouse, zen, idle, scroll, key)
+  jiggle-helper       # Compiled arm64 binary, committed to the repo
 ```
 
 ---

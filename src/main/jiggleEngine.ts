@@ -1,9 +1,10 @@
 import { powerSaveBlocker } from 'electron';
-import { execFileSync, spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import store from './store';
 import { isBlocked } from './conditions';
 import { isWithinSchedule } from './scheduler';
 import * as humanEngine from './humanEngine';
+import * as helper from './helper';
 
 type EngineState = 'stopped' | 'running' | 'paused';
 
@@ -12,30 +13,29 @@ let intervalHandle: ReturnType<typeof setInterval> | null = null;
 let zenBlockerId: number | null = null;
 let caffeinateProcess: ChildProcess | null = null;
 
-// ── Swift helper binary ───────────────────────────────────────────────────────
-// JXA's CoreGraphics ObjC bridge crashes (SIGSEGV) when spawned from Electron
-// because the subprocess doesn't get a window server connection.
-// A compiled Swift binary runs as its own process with full macOS API access.
+// ── Health ───────────────────────────────────────────────────────────────────
+// Both flags are surfaced in the popup so a broken install fails loudly instead
+// of silently doing nothing.
 
-const HELPER_BIN = `${__dirname}/../../helpers/jiggle-helper`;
+export interface Health {
+  helper: helper.HelperStatus;
+  accessibilityGranted: boolean;
+}
 
-function runHelper(cmd: 'mouse' | 'zen'): string {
-  return execFileSync(HELPER_BIN, [cmd], { timeout: 3000 }).toString().trim();
+export function getHealth(): Health {
+  const { status, canPostEvents } = helper.checkHealth();
+  return {
+    helper: status,
+    // Every mode posts HID events now — warping the cursor moves it but does not
+    // reset the idle timer, so it never kept a status green. All modes need this.
+    accessibilityGranted: canPostEvents,
+  };
 }
 
 // ── Standard jiggle ──────────────────────────────────────────────────────────
 
-export function checkAccessibilityPermission(): boolean {
-  try {
-    runHelper('mouse');
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function doStandardJiggle(): void {
-  const result = runHelper('mouse');
+  const result = helper.run('mouse');
   console.log('[jiggle] position:', result);
 }
 
@@ -81,13 +81,13 @@ function tick(): void {
       console.error('[jiggle] error:', err);
     }
   } else {
-    // Zen: powerSaveBlocker + caffeinate prevent system sleep.
-    // IOPMAssertionDeclareUserActivity resets HIDIdleTime so apps like
-    // Slack/Teams don't show "away" — no cursor movement required.
+    // Zen: powerSaveBlocker + caffeinate prevent system sleep, and the helper
+    // posts a zero-delta mouse move to reset the input idle timer so apps like
+    // Slack/Teams don't show "away" — all without visible cursor movement.
     try {
-      runHelper('zen');
-    } catch {
-      // Non-critical
+      helper.run('zen');
+    } catch (err) {
+      console.error('[zen] idle-timer reset failed:', err);
     }
   }
 }

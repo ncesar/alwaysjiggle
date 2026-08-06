@@ -1,9 +1,11 @@
-import { execFileSync } from 'child_process';
 import { isBlocked } from './conditions';
 import { isWithinSchedule } from './scheduler';
+import * as helper from './helper';
 
-const HELPER_BIN = `${__dirname}/../../helpers/jiggle-helper`;
 const IDLE_THRESHOLD_SEC = 12;
+// A failing idle probe must not disable the mode forever (that was the original
+// bug), but one transient timeout should not make us type over the user either.
+const MAX_PROBE_FAILURES = 3;
 
 type HumanState = 'idle' | 'light' | 'burst' | 'break';
 
@@ -26,6 +28,7 @@ let paused = false;
 let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 let currentState: HumanState = 'light';
 let burstRemaining = 0;
+let probeFailures = 0;
 
 function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
@@ -45,12 +48,17 @@ function weightedPick(choices: Array<[HumanState, number]>): HumanState {
   return choices[choices.length - 1][0];
 }
 
-function getIdleSec(): number {
+// Returns null when idle time can't be read, so the caller can tell
+// "user is active" apart from "the probe failed" — conflating the two silently
+// disabled every action for the whole session.
+function getIdleSec(): number | null {
   try {
-    const out = execFileSync(HELPER_BIN, ['idle-time'], { timeout: 2000 }).toString().trim();
-    return parseFloat(out) || 0;
-  } catch {
-    return 0; // assume user is active — safe default
+    const out = helper.run('idle-time', [], 2000);
+    const parsed = parseFloat(out);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch (err) {
+    console.error('[human] idle probe failed:', err);
+    return null;
   }
 }
 
@@ -59,16 +67,16 @@ function doMouseDrift(): void {
   const angle = Math.random() * 2 * Math.PI;
   const dx = Math.round(distance * Math.cos(angle));
   const dy = Math.round(distance * Math.sin(angle));
-  execFileSync(HELPER_BIN, ['mouse-drift', String(dx), String(dy)], { timeout: 3000 });
+  helper.run('mouse-drift', [String(dx), String(dy)]);
 }
 
 function doScroll(): void {
   const amount = (Math.random() < 0.5 ? 1 : -1) * randInt(1, 3);
-  execFileSync(HELPER_BIN, ['scroll', String(amount)], { timeout: 3000 });
+  helper.run('scroll', [String(amount)]);
 }
 
 function doSafeKey(): void {
-  execFileSync(HELPER_BIN, ['key-safe'], { timeout: 3000 });
+  helper.run('key-safe');
 }
 
 function runAction(state: HumanState): void {
@@ -79,15 +87,15 @@ function runAction(state: HumanState): void {
     if (roll < 0.8) {
       doMouseDrift();
     } else {
-      try { doScroll(); } catch { /* needs Accessibility — graceful skip */ }
+      try { doScroll(); } catch (err) { console.error('[human] scroll failed:', err); }
     }
   } else { // burst
     if (roll < 0.6) {
       doMouseDrift();
     } else if (roll < 0.9) {
-      try { doScroll(); } catch { /* needs Accessibility — graceful skip */ }
+      try { doScroll(); } catch (err) { console.error('[human] scroll failed:', err); }
     } else {
-      try { doSafeKey(); } catch { /* needs Accessibility — graceful skip */ }
+      try { doSafeKey(); } catch (err) { console.error('[human] key failed:', err); }
     }
   }
 }
@@ -117,10 +125,19 @@ function tick(): void {
 
   if (!isBlocked() && isWithinSchedule()) {
     const idleSec = getIdleSec();
-    if (idleSec >= IDLE_THRESHOLD_SEC) {
+    probeFailures = idleSec === null ? probeFailures + 1 : 0;
+
+    const shouldAct = idleSec === null
+      ? probeFailures >= MAX_PROBE_FAILURES
+      : idleSec >= IDLE_THRESHOLD_SEC;
+
+    if (shouldAct) {
       try { runAction(currentState); } catch (err) {
         console.error('[human] action error:', err);
       }
+    } else if (idleSec === null) {
+      console.warn('[human] idle probe failed (%d/%d), skipping this tick',
+        probeFailures, MAX_PROBE_FAILURES);
     } else {
       console.log('[human] user active (%.1fs idle), skipping', idleSec);
     }
@@ -135,6 +152,7 @@ export function start(): void {
   paused = false;
   currentState = 'light';
   burstRemaining = 0;
+  probeFailures = 0;
   scheduleNext();
 }
 
