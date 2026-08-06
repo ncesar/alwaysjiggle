@@ -11,17 +11,20 @@ function getTrayTitle(): string {
   if (!store.get('enabled')) return '⏸ Paused';
 
   const pauseUntil = store.get('pauseUntil');
-  if (pauseUntil !== null && pauseUntil > Date.now()) return '⏸ Paused';
+  if (pauseUntil !== null && pauseUntil > Date.now()) return '⏸';
 
-  const { onBattery } = conditions.getState();
-  if (store.get('neverOnBattery') && onBattery) return '⚡ Battery pause';
+  const { onBattery, watchedAppRunning } = conditions.getState();
+  if (store.get('neverOnBattery') && onBattery) return '⚡Pause';
 
-  if (!isWithinSchedule()) return '🕒 Scheduled off';
+  const appCond = store.get('neverIfAppNotRunning');
+  if (appCond.enabled && appCond.apps.length > 0 && !watchedAppRunning) return '📱 App paused';
+
+  if (!isWithinSchedule()) return '🕒Off';
 
   const mode = store.get('mode');
-  if (mode === 'humanized') return '🧠 Jiggling(Human)';
-  if (mode === 'zen') return '🟢 Jiggling(Zen)';
-  return '🟢 Jiggling(Standard)';
+  if (mode === 'humanized') return '🧠';
+  if (mode === 'zen') return '🟢Zen';
+  return '🟢';
 }
 
 
