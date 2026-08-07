@@ -37,15 +37,28 @@ Then open it normally.
 
 ### Grant Accessibility permission
 
-Open **System Settings → Privacy & Security → Accessibility** and enable AlwaysJiggle.
+On first launch AlwaysJiggle asks macOS for Accessibility access and you get the
+standard system dialog — click **Open System Settings** and switch AlwaysJiggle on.
+You should not need to find the pane yourself or use the **+** button.
 
-If you are **updating** from an earlier version, select the existing AlwaysJiggle row
-and remove it with the **−** button first, then add the new app. Because the app is not
-signed with an Apple Developer certificate, macOS ties the permission to that exact
-build — after an update the old entry still appears enabled but no longer applies, and
-AlwaysJiggle will silently do nothing.
+The app shows a warning banner whenever the permission is missing, and the menu bar
+icon turns ⚠️.
 
-The app shows a warning banner whenever the permission is missing.
+### Updating from v1.1.3 or earlier — one-time extra step
+
+**Upgrading to v1.1.4 drops your Accessibility permission once.** Before v1.1.4 each
+build was signed ad hoc, which tied the permission to that exact build; from v1.1.4
+onward releases are signed with a stable certificate, so the permission carries across
+updates and this stops happening.
+
+Because the old and new builds have different identities, macOS leaves the old entry
+behind looking enabled while granting nothing. So this one time:
+
+1. Open **System Settings → Privacy & Security → Accessibility**
+2. Select the existing **AlwaysJiggle** row and remove it with **−**
+3. Launch the new version and grant access when the dialog appears
+
+Updates after v1.1.4 keep the permission and need none of this.
 
 ---
 
