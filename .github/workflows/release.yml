@@ -47,6 +47,14 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      # Ship-blocking. helpers/jiggle-helper is committed and copied verbatim, so a
+      # helper compiled with the wrong deployment target ships silently: the app
+      # still launches and only the helper fails to load. Invisible on macOS 26 and
+      # not caught by the signing guards, because the signature is valid either way.
+      - name: Verify helper macOS compatibility
+        if: steps.current.outputs.version != steps.previous.outputs.version
+        run: ./scripts/verify-helper-compat.sh release/mac-arm64/AlwaysJiggle.app
+
       - name: Sign with the project certificate
         if: steps.current.outputs.version != steps.previous.outputs.version
         env:

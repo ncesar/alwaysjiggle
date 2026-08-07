@@ -116,8 +116,13 @@ npm install
 The native helper binary is already compiled and committed at `helpers/jiggle-helper`. If you need to recompile it:
 
 ```sh
-swiftc helpers/jiggle-helper.swift -o helpers/jiggle-helper
+swiftc -target arm64-apple-macos12.0 helpers/jiggle-helper.swift -o helpers/jiggle-helper
 ```
+
+The `-target` flag is required. Without it `swiftc` targets whatever macOS version the
+build machine runs, which links Swift overlay libraries that do not exist on older
+systems. The helper then fails to load for every user on an older macOS while the app
+itself still launches, so the app appears to work but nothing jiggles.
 
 ### Start in development
 
