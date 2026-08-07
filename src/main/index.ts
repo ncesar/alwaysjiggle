@@ -1,4 +1,4 @@
-import { app, ipcMain, globalShortcut, shell, powerMonitor } from 'electron';
+import { app, ipcMain, globalShortcut, shell, powerMonitor, systemPreferences } from 'electron';
 
 app.setName('AlwaysJiggle');
 import store from './store';
@@ -106,6 +106,17 @@ app.whenReady().then(() => {
     health.helper,
     health.accessibilityGranted ? 'granted' : 'NOT GRANTED');
 
+  // Ask macOS for Accessibility rather than leaving the user to find the pane
+  // and press "+". Adding an app by hand records a different TCC entry than the
+  // one the system creates when an app requests access through this API, and a
+  // hand-added entry does not reliably cover the helper subprocess.
+  //
+  // macOS shows this dialog at most once per code identity and silently no-ops
+  // afterwards, so calling it on every denied launch cannot nag the user.
+  if (!health.accessibilityGranted) {
+    systemPreferences.isTrustedAccessibilityClient(true);
+  }
+
   // Apply persisted login item setting
   applyLoginSetting();
 
@@ -147,9 +158,33 @@ app.whenReady().then(() => {
     // other updateTrayIcon() call sites correlate with that. Without this the
     // ⚠️ state could sit unnoticed for hours. One cached probe per 30s.
     trayManager.updateTrayIcon();
+    if (!jiggleEngine.getHealth().accessibilityGranted) watchForAccessGrant();
   }
 
   setInterval(syncSchedule, 30_000);
+
+  // The 30s poll is too coarse for the one moment it matters most: the user
+  // grants Accessibility in System Settings and switches back to a tray still
+  // reading ⚠️. Half a minute of that looks like the grant did not work, and
+  // the usual reaction is to toggle settings until something changes.
+  //
+  // Poll quickly, but only while the grant is missing — once it lands the timer
+  // stops, so a working install never pays for this. syncSchedule restarts it
+  // if the grant is ever revoked (an app update or macOS update can drop it).
+  let accessWatch: ReturnType<typeof setInterval> | null = null;
+  function watchForAccessGrant(): void {
+    if (accessWatch !== null) return;
+    accessWatch = setInterval(() => {
+      const granted = jiggleEngine.getHealth().accessibilityGranted;
+      trayManager.updateTrayIcon();
+      pushStateToRenderer();
+      if (granted && accessWatch !== null) {
+        clearInterval(accessWatch);
+        accessWatch = null;
+      }
+    }, 2_000);
+  }
+  if (!health.accessibilityGranted) watchForAccessGrant();
 
   // setInterval is paused during system sleep, so the 30s poll never fires
   // while the machine is suspended. Re-evaluate the schedule immediately on wake.
