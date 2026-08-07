@@ -186,6 +186,22 @@ function renderHealthBanner(): void {
   banner.style.display = 'none';
 }
 
+// Set by renderUpdateBanner and read by the button's one-time click listener,
+// so the listener is never re-bound on the render path.
+let updateReleaseUrl: string | null = null;
+
+function renderUpdateBanner(info: AppSettings['updateInfo']): void {
+  const banner = el('update-banner');
+  if (!info?.hasUpdate) {
+    banner.style.display = 'none';
+    updateReleaseUrl = null;
+    return;
+  }
+  updateReleaseUrl = info.releaseUrl;
+  el('update-version').textContent = `v${info.latestVersion}`;
+  banner.style.display = 'flex';
+}
+
 function applyStateToUI(state: AppSettings): void {
   (el<HTMLInputElement>('enabled')).checked = state.enabled;
 
@@ -214,6 +230,7 @@ function applyStateToUI(state: AppSettings): void {
   }
 
   el('schedule-off-bar').style.display = state.scheduledOff ? 'block' : 'none';
+  renderUpdateBanner(state.updateInfo);
   renderHealthBanner();
 
   renderSchedules(state.schedules);
@@ -228,22 +245,20 @@ function resizeToContent(): void {
 // ── Wiring ────────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
-  const [state, version, updateInfo] = await Promise.all([
+  const [state, version] = await Promise.all([
     window.electronAPI.getState(),
     window.electronAPI.getVersion(),
-    window.electronAPI.getUpdateInfo(),
     refreshHealth(),
   ]);
   el('app-version').textContent = `v${version} ·`;
-  if (updateInfo?.hasUpdate) {
-    const link = el<HTMLAnchorElement>('update-link');
-    link.textContent = `v${updateInfo.latestVersion} available · Download`;
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      window.electronAPI.openUrl(updateInfo.releaseUrl);
-    });
-    el('update-notice').style.display = 'block';
-  }
+
+  // Bound once, not inside renderUpdateBanner: applyStateToUI runs on every push
+  // from main, and re-binding there would stack listeners and open one tab per
+  // render on a single click.
+  el('update-download-btn').addEventListener('click', () => {
+    if (updateReleaseUrl) window.electronAPI.openUrl(updateReleaseUrl);
+  });
+
   applyStateToUI(state);
 
   // Push updates from main (e.g., conditions block/unblock). Main also pushes on

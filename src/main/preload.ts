@@ -4,7 +4,6 @@ import { AppSettings, SettingsPatch } from './types';
 export interface ElectronAPI {
   getVersion: () => Promise<string>;
   getHealth: () => Promise<{ helper: 'ok' | 'missing' | 'error'; accessibilityGranted: boolean }>;
-  getUpdateInfo: () => Promise<{ hasUpdate: boolean; latestVersion: string; releaseUrl: string } | null>;
   getState: () => Promise<AppSettings>;
   setState: (patch: SettingsPatch) => Promise<AppSettings>;
   pauseUntil: (untilMs: number) => Promise<AppSettings>;
@@ -28,9 +27,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   getHealth: (): Promise<{ helper: 'ok' | 'missing' | 'error'; accessibilityGranted: boolean }> =>
     ipcRenderer.invoke('get-health'),
-
-  getUpdateInfo: (): Promise<{ hasUpdate: boolean; latestVersion: string; releaseUrl: string } | null> =>
-    ipcRenderer.invoke('get-update-info'),
 
   getState: (): Promise<AppSettings> =>
     ipcRenderer.invoke('get-state'),

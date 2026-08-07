@@ -148,6 +148,42 @@ input:checked + .slider::before {
   cursor: pointer;
 }
 
+/* ── Update banner ──────────────────────────────────────── */
+
+/* Hidden inline as display:none; the render path restores `flex`, not `block`. */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 14px;
+  background: #16301f;
+  border-bottom: 2px solid var(--success);
+  font-size: 12px;
+  color: var(--success);
+}
+
+.update-banner b {
+  font-weight: 700;
+}
+
+.update-banner-btn {
+  flex-shrink: 0;
+  background: var(--success);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #0d2216;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: opacity 0.1s;
+}
+
+.update-banner-btn:hover {
+  opacity: 0.82;
+}
+
 /* ── Section ─────────────────────────────────────────────────────────────── */
 
 .section {
@@ -463,21 +499,6 @@ input:checked + .slider::before {
 
 .credits-link:hover {
   color: var(--accent);
-  text-decoration: underline;
-}
-
-#update-notice {
-  margin-top: 3px;
-}
-
-.update-link {
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.update-link:hover {
   text-decoration: underline;
 }
 

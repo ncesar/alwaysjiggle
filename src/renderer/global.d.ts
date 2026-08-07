@@ -3,7 +3,6 @@ import type { AppSettings, SettingsPatch } from '../main/types';
 interface ElectronAPI {
   getVersion: () => Promise<string>;
   getHealth: () => Promise<{ helper: 'ok' | 'missing' | 'error'; accessibilityGranted: boolean }>;
-  getUpdateInfo: () => Promise<{ hasUpdate: boolean; latestVersion: string; releaseUrl: string } | null>;
   getState: () => Promise<AppSettings>;
   setState: (patch: SettingsPatch) => Promise<AppSettings>;
   pauseUntil: (untilMs: number) => Promise<AppSettings>;

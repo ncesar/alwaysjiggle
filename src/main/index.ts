@@ -6,32 +6,19 @@ import * as trayManager from './tray';
 import * as jiggleEngine from './jiggleEngine';
 import * as conditions from './conditions';
 import { isWithinSchedule } from './scheduler';
+import * as updater from './updater';
 import { SettingsPatch } from './types';
 import pkg from '../../package.json';
 
 let timedPauseHandle: ReturnType<typeof setTimeout> | null = null;
 let lastInSchedule = false; // initialised inside whenReady once the store is ready
 
-interface UpdateInfo {
-  hasUpdate: boolean;
-  latestVersion: string;  // v-prefix stripped, e.g. "1.3"
-  releaseUrl: string;
-}
-let cachedUpdateInfo: UpdateInfo | null = null;
-
-async function checkForUpdate(): Promise<void> {
-  try {
-    const res = await fetch(
-      'https://api.github.com/repos/ncesar/AlwaysJiggle/releases/latest',
-      { headers: { 'User-Agent': 'AlwaysJiggle-updater' } }
-    );
-    if (!res.ok) return;
-    const data = await res.json() as { tag_name: string; html_url: string };
-    const latest  = data.tag_name.replace(/^v/i, '');
-    const current = pkg.version.replace(/^v/i, '');
-    cachedUpdateInfo = { hasUpdate: latest !== current, latestVersion: latest, releaseUrl: data.html_url };
-  } catch {
-    // offline or API error — leave cache null, show nothing
+// Runs a due update check and refreshes the two surfaces that show the result:
+// the tray title (gains a badge) and the popup's update banner.
+async function refreshUpdateCheck(): Promise<void> {
+  if (await updater.maybeCheck()) {
+    trayManager.updateTrayIcon();
+    pushStateToRenderer();
   }
 }
 
@@ -159,6 +146,11 @@ app.whenReady().then(() => {
     // ⚠️ state could sit unnoticed for hours. One cached probe per 30s.
     trayManager.updateTrayIcon();
     if (!jiggleEngine.getHealth().accessibilityGranted) watchForAccessGrant();
+
+    // Piggy-backs on the 30s poll rather than owning a timer, for the reason in
+    // updater.ts: a 12h setInterval stalls while the Mac sleeps. 2879 ticks out
+    // of 2880 this is a single Date.now() comparison and no network call.
+    void refreshUpdateCheck().catch(console.error);
   }
 
   setInterval(syncSchedule, 30_000);
@@ -190,15 +182,13 @@ app.whenReady().then(() => {
   // while the machine is suspended. Re-evaluate the schedule immediately on wake.
   powerMonitor.on('resume', syncSchedule);
 
+  // syncSchedule's first tick is 30s out, and 'resume' only fires after a sleep.
+  void refreshUpdateCheck().catch(console.error);
+
   // ── IPC Handlers ──────────────────────────────────────────────────────────
 
   ipcMain.handle('get-version', () => pkg.version);
   ipcMain.handle('get-health', () => jiggleEngine.getHealth());
-  ipcMain.handle('get-update-info', async () => {
-    if (cachedUpdateInfo === null) await checkForUpdate();
-    return cachedUpdateInfo;
-  });
-
   ipcMain.handle('get-state', () => {
     return getComputedState();
   });
@@ -273,7 +263,11 @@ app.whenReady().then(() => {
 });
 
 function getComputedState() {
-  return { ...store.store, scheduledOff: !isWithinSchedule() };
+  return {
+    ...store.store,
+    scheduledOff: !isWithinSchedule(),
+    updateInfo: updater.getUpdateInfo(),
+  };
 }
 
 function pushStateToRenderer(): void {

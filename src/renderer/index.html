@@ -52,6 +52,13 @@
       <a href="#" id="open-accessibility">Open Privacy Settings</a>
     </div>
 
+    <!-- Update available (hidden until a check finds a newer release).
+         Sits below the accessibility warning so a broken install still reads first. -->
+    <div class="update-banner" id="update-banner" style="display:none">
+      <span>Update available &middot; <b id="update-version"></b></span>
+      <button class="update-banner-btn" id="update-download-btn">Download</button>
+    </div>
+
     <!-- Mode -->
     <div class="section">
       <div class="section-title">Mode</div>
@@ -133,9 +140,6 @@
       <span id="app-version"></span>
       Made by <a class="credits-link" data-url="https://cesar.dev.br">cesar.dev.br</a>
       · <a class="credits-link" data-url="https://github.com/ncesar/AlwaysJiggle">Contribute</a>
-      <div id="update-notice" style="display:none">
-        <a class="update-link" id="update-link" href="#"></a>
-      </div>
     </div>
 
   </div>

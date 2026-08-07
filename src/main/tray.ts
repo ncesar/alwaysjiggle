@@ -4,11 +4,12 @@ import store from './store';
 import * as conditions from './conditions';
 import { isWithinSchedule } from './scheduler';
 import * as helper from './helper';
+import * as updater from './updater';
 
 let tray: Tray | null = null;
 let popupWindow: BrowserWindow | null = null;
 
-function getTrayTitle(): string {
+function getStatusGlyph(): string {
   // Checked first, ahead of ⏸: a fresh install defaults to enabled=false, so a
   // new user missing Accessibility would otherwise see ⏸ and no hint that the
   // app cannot work at all. The tray is the only always-visible surface, and it
@@ -33,6 +34,19 @@ function getTrayTitle(): string {
   return '🟢';
 }
 
+// The status glyph is a chain of mutually exclusive states, so an available
+// update is appended rather than replacing one — the user must not lose sight of
+// ⚠️ or ⏸ just because a release landed.
+function getTrayTitle(): string {
+  return getStatusGlyph() + (updater.hasUpdate() ? '‼️' : '');
+}
+
+function getTrayTooltip(): string {
+  const info = updater.getUpdateInfo();
+  return info?.hasUpdate
+    ? `AlwaysJiggle — v${info.latestVersion} available`
+    : 'AlwaysJiggle';
+}
 
 function createPopupWindow(): void {
   popupWindow = new BrowserWindow({
@@ -92,8 +106,7 @@ export function hidePopup(): void {
 
 export function init(): void {
   tray = new Tray(nativeImage.createEmpty());
-  tray.setTitle(getTrayTitle());
-  tray.setToolTip('AlwaysJiggle');
+  updateTrayIcon();
 
   createPopupWindow();
 
@@ -112,6 +125,8 @@ export function init(): void {
 export function updateTrayIcon(): void {
   if (!tray) return;
   tray.setTitle(getTrayTitle());
+  // The ‼️ badge on its own does not say what is new; the tooltip does.
+  tray.setToolTip(getTrayTooltip());
 }
 
 export function getPopupWindow(): BrowserWindow | null {
