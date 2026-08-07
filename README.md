@@ -1,12 +1,27 @@
 # AlwaysJiggle
 
+A mouse jiggler for macOS that lives in your menu bar — keep your Mac awake and your Slack or Teams status green, without opening a Terminal.
+
+**[alwaysjiggle.cesar.dev.br](https://alwaysjiggle.cesar.dev.br)** · [Download the latest release](../../releases/latest)
+
+[![Latest release](https://img.shields.io/github/v/release/ncesar/AlwaysJiggle?label=release)](../../releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ncesar/AlwaysJiggle/total?label=downloads)](../../releases)
+![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-black)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](#license)
+
 ![AlwaysJiggle screenshot](screenshot.png)
 
-A macOS menu bar app that keeps your machine awake and your status green — no more "away" on Slack or Teams while you step away for coffee.
+Most jigglers wiggle the pointer and hope for the best. AlwaysJiggle posts real input
+events, so the idle timer that Slack and Teams actually read gets reset and your status
+stays green. It also knows when to stop: it follows your work schedule, backs off while
+you're genuinely typing, and pauses itself on battery.
 
 ---
 
 ## Features
+
+Three ways to keep your Mac awake, plus the guardrails that stop it running when you're
+not working.
 
 - **Standard mode** — nudges the mouse cursor by 2px and back every N seconds
 - **Zen mode** — keeps the display awake and resets the idle timer with no visible cursor movement
@@ -18,6 +33,23 @@ A macOS menu bar app that keeps your machine awake and your status green — no 
 > **All three modes require Accessibility permission.** macOS only counts real input
 > events toward the idle timer that Slack and Teams read — simply moving the cursor
 > does not keep a status active.
+
+---
+
+## Why not just use `caffeinate`?
+
+`caffeinate -di` keeps the display on, and that is the whole feature. It will not keep a
+Slack or Teams status green, because those read the input idle timer — and only real
+input events reset that. A Terminal window left running in the background does nothing
+for it.
+
+A macOS jiggler is the other half of the job, and AlwaysJiggle adds the parts a shell
+loop doesn't have:
+
+- **Three modes**, including a humanized one with irregular bursts and breaks instead of a metronome tick
+- **A work schedule** — Mon–Fri, 9am–5pm, then it stops on its own
+- **Battery and lock-screen awareness** — no quietly draining the laptop in your bag
+- **A menu bar UI** — switch modes, pause for an hour, quit; no flags to remember, no Terminal window to keep open
 
 ---
 
