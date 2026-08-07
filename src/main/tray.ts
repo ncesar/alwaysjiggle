@@ -9,16 +9,18 @@ let tray: Tray | null = null;
 let popupWindow: BrowserWindow | null = null;
 
 function getTrayTitle(): string {
+  // Checked first, ahead of ⏸: a fresh install defaults to enabled=false, so a
+  // new user missing Accessibility would otherwise see ⏸ and no hint that the
+  // app cannot work at all. The tray is the only always-visible surface, and it
+  // reading calm while nothing works is the failure this whole change targets.
+  // (Cached — see helper.checkHealth.)
+  const health = helper.checkHealth();
+  if (health.status !== 'ok' || !health.canPostEvents) return '⚠️';
+
   if (!store.get('enabled')) return '⏸';
 
   const pauseUntil = store.get('pauseUntil');
   if (pauseUntil !== null && pauseUntil > Date.now()) return '⏸';
-
-  // The tray is the only always-visible surface. Showing 🟢 while the helper is
-  // missing or Accessibility is denied is exactly the silent failure that made
-  // every released build look healthy while doing nothing. (Cached — see helper.)
-  const health = helper.checkHealth();
-  if (health.status !== 'ok' || !health.canPostEvents) return '⚠️';
 
   const { onBattery } = conditions.getState();
   if (store.get('neverOnBattery') && onBattery) return '⚡';
