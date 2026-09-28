@@ -46,11 +46,49 @@ function scheduleTimedResume(untilMs: number): void {
   }, delay);
 }
 
+// `open -a AlwaysJiggle --args --on|--off|--toggle`
+// --args is consumed by open(1); only the flag reaches process.argv.
+// Same argv arrives on second-instance when the app is already running.
+type CliCommand = 'on' | 'off' | 'toggle';
+
+function parseCliCommand(argv: string[]): CliCommand | null {
+  if (argv.includes('--on')) return 'on';
+  if (argv.includes('--off')) return 'off';
+  if (argv.includes('--toggle')) return 'toggle';
+  return null;
+}
+
+const launchCommand = parseCliCommand(process.argv);
+
+// Second launch can win the race against whenReady; hold the command until the
+// tray and engine exist. JS is single-threaded, so the handoff below is safe.
+let cliReady = false;
+let pendingCliCommand: CliCommand | null = null;
+
+function applyCliCommand(cmd: CliCommand): void {
+  const enabled = cmd === 'toggle' ? !store.get('enabled') : cmd === 'on';
+  store.set('enabled', enabled);
+  clearTimedPause();
+  jiggleEngine.restart();
+  trayManager.updateTrayIcon();
+  pushStateToRenderer();
+}
+
 // Single instance lock
 if (!app.requestSingleInstanceLock()) {
   app.quit();
   process.exit(0);
 }
+
+app.on('second-instance', (_event, argv) => {
+  const cmd = parseCliCommand(argv);
+  if (!cmd) return;
+  if (!cliReady) {
+    pendingCliCommand = cmd;
+    return;
+  }
+  applyCliCommand(cmd);
+});
 
 // Keep alive when popup window closes (menu bar app — no quit on window close)
 app.on('window-all-closed', () => { /* intentional no-op */ });
@@ -107,19 +145,30 @@ app.whenReady().then(() => {
   // Apply persisted login item setting
   applyLoginSetting();
 
-  // Resume jiggling if it was enabled when the app last ran.
-  // If a timed pause is still in the future, re-arm the timer; otherwise clear stale value.
-  const savedPauseUntil = store.get('pauseUntil');
-  if (savedPauseUntil !== null) {
-    if (savedPauseUntil > Date.now()) {
-      scheduleTimedResume(savedPauseUntil);
-    } else {
-      store.set('pauseUntil', null);
-    }
-  }
+  // Cold start with --on/--off/--toggle applies that instead of restoring the
+  // saved enabled flag. A second-instance command that arrived early is the
+  // same path. Otherwise resume whatever was enabled last run.
+  const startupCommand = launchCommand ?? pendingCliCommand;
+  pendingCliCommand = null;
+  cliReady = true;
 
-  if (store.get('enabled') && !conditions.isBlocked() && store.get('pauseUntil') === null) {
-    jiggleEngine.start();
+  if (startupCommand) {
+    console.log('[startup] cli=%s', startupCommand);
+    applyCliCommand(startupCommand);
+  } else {
+    // If a timed pause is still in the future, re-arm the timer; otherwise clear stale value.
+    const savedPauseUntil = store.get('pauseUntil');
+    if (savedPauseUntil !== null) {
+      if (savedPauseUntil > Date.now()) {
+        scheduleTimedResume(savedPauseUntil);
+      } else {
+        store.set('pauseUntil', null);
+      }
+    }
+
+    if (store.get('enabled') && !conditions.isBlocked() && store.get('pauseUntil') === null) {
+      jiggleEngine.start();
+    }
   }
 
   // Sync engine state to the current schedule window.
