@@ -92,6 +92,18 @@ behind looking enabled while granting nothing. So this one time:
 
 Updates after v1.1.4 keep the permission and need none of this.
 
+### Command line (optional)
+
+The menu bar is still the normal way to control AlwaysJiggle. The same on/off switch can also be driven from a script, a hotkey launcher, or Shortcuts. Each command launches the app if it is not running, or talks to the instance that is already open. A second menu bar icon is not created.
+
+```sh
+open -a AlwaysJiggle --args --on
+open -a AlwaysJiggle --args --off
+open -a AlwaysJiggle --args --toggle
+```
+
+`--on` and `--off`set the enabled state. `--toggle` flips it. All three clear a timed pause, then start or stop jiggling the same way the popup checkbox does. A launch with no flag is unchanged: the app restores whatever it was doing last, including a pause that has not expired yet.
+
 ---
 
 ## Running locally
