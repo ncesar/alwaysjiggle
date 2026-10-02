@@ -46,9 +46,12 @@ function scheduleTimedResume(untilMs: number): void {
   }, delay);
 }
 
-// `open -a AlwaysJiggle --args --on|--off|--toggle`
+// `open -n -a AlwaysJiggle --args --on|--off|--toggle`
 // --args is consumed by open(1); only the flag reaches process.argv.
-// Same argv arrives on second-instance when the app is already running.
+// -n matters: plain `open -a` on a running app just activates it and drops
+// --args, so no new process starts and nothing is delivered. With -n a fresh
+// process always launches, fails the single-instance lock below, and its argv
+// arrives here on second-instance — then the fresh process exits.
 type CliCommand = 'on' | 'off' | 'toggle';
 
 function parseCliCommand(argv: string[]): CliCommand | null {
@@ -59,11 +62,6 @@ function parseCliCommand(argv: string[]): CliCommand | null {
 }
 
 const launchCommand = parseCliCommand(process.argv);
-
-// Second launch can win the race against whenReady; hold the command until the
-// tray and engine exist. JS is single-threaded, so the handoff below is safe.
-let cliReady = false;
-let pendingCliCommand: CliCommand | null = null;
 
 function applyCliCommand(cmd: CliCommand): void {
   const enabled = cmd === 'toggle' ? !store.get('enabled') : cmd === 'on';
@@ -79,16 +77,6 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
   process.exit(0);
 }
-
-app.on('second-instance', (_event, argv) => {
-  const cmd = parseCliCommand(argv);
-  if (!cmd) return;
-  if (!cliReady) {
-    pendingCliCommand = cmd;
-    return;
-  }
-  applyCliCommand(cmd);
-});
 
 // Keep alive when popup window closes (menu bar app — no quit on window close)
 app.on('window-all-closed', () => { /* intentional no-op */ });
@@ -122,6 +110,15 @@ app.whenReady().then(() => {
   // Create tray and popup window
   trayManager.init();
 
+  // Electron only emits second-instance after ready, and this whole callback
+  // runs synchronously in the microtask that resolves whenReady — before the
+  // event loop can deliver any other event (including a second instance's
+  // argv). So registering here is always in time; no pending/ready flag needed.
+  app.on('second-instance', (_event, argv) => {
+    const cmd = parseCliCommand(argv);
+    if (cmd) applyCliCommand(cmd);
+  });
+
   // Push fresh computed state whenever the popup becomes visible,
   // in case it missed updates while hidden (e.g. Mac was locked).
   trayManager.getPopupWindow()?.on('show', () => pushStateToRenderer());
@@ -146,15 +143,10 @@ app.whenReady().then(() => {
   applyLoginSetting();
 
   // Cold start with --on/--off/--toggle applies that instead of restoring the
-  // saved enabled flag. A second-instance command that arrived early is the
-  // same path. Otherwise resume whatever was enabled last run.
-  const startupCommand = launchCommand ?? pendingCliCommand;
-  pendingCliCommand = null;
-  cliReady = true;
-
-  if (startupCommand) {
-    console.log('[startup] cli=%s', startupCommand);
-    applyCliCommand(startupCommand);
+  // saved enabled flag. Otherwise resume whatever was enabled last run.
+  if (launchCommand) {
+    console.log('[startup] cli=%s', launchCommand);
+    applyCliCommand(launchCommand);
   } else {
     // If a timed pause is still in the future, re-arm the timer; otherwise clear stale value.
     const savedPauseUntil = store.get('pauseUntil');
