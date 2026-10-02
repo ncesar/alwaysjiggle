@@ -94,15 +94,17 @@ Updates after v1.1.4 keep the permission and need none of this.
 
 ### Command line (optional)
 
-The menu bar is still the normal way to control AlwaysJiggle. The same on/off switch can also be driven from a script, a hotkey launcher, or Shortcuts. Each command launches the app if it is not running, or talks to the instance that is already open. A second menu bar icon is not created.
+The menu bar is still the normal way to control AlwaysJiggle. The same on/off switch can also be driven from a script, a hotkey launcher, or Shortcuts. If the app is already running, a fresh process starts, hands its arguments to the running instance, and exits immediately — only one instance ever runs and no second menu bar icon is created. If it is not running, the app starts normally.
 
 ```sh
-open -a AlwaysJiggle --args --on
-open -a AlwaysJiggle --args --off
-open -a AlwaysJiggle --args --toggle
+open -n -a AlwaysJiggle --args --on
+open -n -a AlwaysJiggle --args --off
+open -n -a AlwaysJiggle --args --toggle
 ```
 
-`--on` and `--off`set the enabled state. `--toggle` flips it. All three clear a timed pause, then start or stop jiggling the same way the popup checkbox does. A launch with no flag is unchanged: the app restores whatever it was doing last, including a pause that has not expired yet.
+`-n` is required: without it, macOS just activates a running instance and drops whatever follows `--args`, so the command never reaches the app.
+
+`--on` and `--off` set the enabled state. `--toggle` flips it. All three clear a timed pause, then start or stop jiggling the same way the popup checkbox does. A launch with no flag is unchanged: the app restores whatever it was doing last, including a pause that has not expired yet.
 
 ---
 
