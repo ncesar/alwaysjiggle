@@ -46,6 +46,32 @@ function scheduleTimedResume(untilMs: number): void {
   }, delay);
 }
 
+// `open -n -a AlwaysJiggle --args --on|--off|--toggle`
+// --args is consumed by open(1); only the flag reaches process.argv.
+// -n matters: plain `open -a` on a running app just activates it and drops
+// --args, so no new process starts and nothing is delivered. With -n a fresh
+// process always launches, fails the single-instance lock below, and its argv
+// arrives here on second-instance — then the fresh process exits.
+type CliCommand = 'on' | 'off' | 'toggle';
+
+function parseCliCommand(argv: string[]): CliCommand | null {
+  if (argv.includes('--on')) return 'on';
+  if (argv.includes('--off')) return 'off';
+  if (argv.includes('--toggle')) return 'toggle';
+  return null;
+}
+
+const launchCommand = parseCliCommand(process.argv);
+
+function applyCliCommand(cmd: CliCommand): void {
+  const enabled = cmd === 'toggle' ? !store.get('enabled') : cmd === 'on';
+  store.set('enabled', enabled);
+  clearTimedPause();
+  jiggleEngine.restart();
+  trayManager.updateTrayIcon();
+  pushStateToRenderer();
+}
+
 // Single instance lock
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -84,6 +110,15 @@ app.whenReady().then(() => {
   // Create tray and popup window
   trayManager.init();
 
+  // Electron only emits second-instance after ready, and this whole callback
+  // runs synchronously in the microtask that resolves whenReady — before the
+  // event loop can deliver any other event (including a second instance's
+  // argv). So registering here is always in time; no pending/ready flag needed.
+  app.on('second-instance', (_event, argv) => {
+    const cmd = parseCliCommand(argv);
+    if (cmd) applyCliCommand(cmd);
+  });
+
   // Push fresh computed state whenever the popup becomes visible,
   // in case it missed updates while hidden (e.g. Mac was locked).
   trayManager.getPopupWindow()?.on('show', () => pushStateToRenderer());
@@ -107,19 +142,25 @@ app.whenReady().then(() => {
   // Apply persisted login item setting
   applyLoginSetting();
 
-  // Resume jiggling if it was enabled when the app last ran.
-  // If a timed pause is still in the future, re-arm the timer; otherwise clear stale value.
-  const savedPauseUntil = store.get('pauseUntil');
-  if (savedPauseUntil !== null) {
-    if (savedPauseUntil > Date.now()) {
-      scheduleTimedResume(savedPauseUntil);
-    } else {
-      store.set('pauseUntil', null);
+  // Cold start with --on/--off/--toggle applies that instead of restoring the
+  // saved enabled flag. Otherwise resume whatever was enabled last run.
+  if (launchCommand) {
+    console.log('[startup] cli=%s', launchCommand);
+    applyCliCommand(launchCommand);
+  } else {
+    // If a timed pause is still in the future, re-arm the timer; otherwise clear stale value.
+    const savedPauseUntil = store.get('pauseUntil');
+    if (savedPauseUntil !== null) {
+      if (savedPauseUntil > Date.now()) {
+        scheduleTimedResume(savedPauseUntil);
+      } else {
+        store.set('pauseUntil', null);
+      }
     }
-  }
 
-  if (store.get('enabled') && !conditions.isBlocked() && store.get('pauseUntil') === null) {
-    jiggleEngine.start();
+    if (store.get('enabled') && !conditions.isBlocked() && store.get('pauseUntil') === null) {
+      jiggleEngine.start();
+    }
   }
 
   // Sync engine state to the current schedule window.
