@@ -29,6 +29,7 @@ not working.
 - **Schedules** — configure active days and time windows (e.g. Mon–Fri, 9am–5pm)
 - **Smart pausing** — auto-pauses on battery, on lock screen, or for a timed duration (15 min / 1 hour / until tomorrow)
 - **Launch on login** — starts automatically with macOS
+- **Command line** — turn it on, off, or toggle it from a script, hotkey launcher, or Shortcuts ([details](#command-line-optional))
 
 > **All three modes require Accessibility permission.** macOS only counts real input
 > events toward the idle timer that Slack and Teams read — simply moving the cursor
